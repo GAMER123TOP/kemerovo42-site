@@ -17,8 +17,13 @@
                 </a>
                 <p>Официальный новостной портал</p>
             </div>
-            <div class="auth-buttons">
-                <a href="./admin/login.html" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Войти</a>
+            <div class="auth-buttons" id="auth-buttons">
+                <!-- Эта кнопка показывается, если НЕ вошел -->
+                <a href="./admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Войти</a>
+                
+                <!-- Эти кнопки показываются, если ВОШЕЛ (они скрыты по умолчанию через CSS) -->
+                <a href="./admin/dashboard.html" id="dash-btn" class="btn-solid" style="text-decoration: none; display: none; margin-right: 10px;">Панель управления</a>
+                <a href="./admin/profile.html" id="prof-btn" class="btn-outline" style="text-decoration: none; display: none;">Мой профиль</a>
             </div>
             <button id="theme-toggle"><i class="fas fa-moon"></i> Тёмная тема</button>
         </div>
