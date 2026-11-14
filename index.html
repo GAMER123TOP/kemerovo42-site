@@ -68,38 +68,50 @@
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
+        
         const newsContainer = document.getElementById('news-container');
         const loadMoreBtn = document.getElementById('load-more-btn');
         
-        const NEWS_PER_PAGE = 10; // Количество новостей на страницу
+        const NEWS_PER_PAGE = 10;
         let lastVisible = null;
         let isFirstLoad = true;
+        let gridContainer = null;
 
-        // Проверка авторизации (если юзера удалили, выкидываем)
-        async function checkUser() {
-            const loggedInUser = localStorage.getItem('loggedInUser');
-            if (!loggedInUser) return;
+        // --- Проверка авторизации (Шапка сайта) ---
+        onAuthStateChanged(auth, (user) => {
+            const loginBtn = document.getElementById('login-btn');
+            const dashBtn = document.getElementById('dash-btn');
+            const profBtn = document.getElementById('prof-btn');
 
-            const q = query(collection(db, "users"), where("username", "==", loggedInUser));
-            const snap = await getDocs(q);
-            
-            if (snap.empty) {
-                // Пользователь был удален, сбрасываем сессию
-                localStorage.removeItem('loggedInUser');
-                return;
+            if (user) {
+                loginBtn.style.display = 'none';
+                dashBtn.style.display = 'inline-flex';
+                profBtn.style.display = 'inline-flex';
+            } else {
+                loginBtn.style.display = 'inline-flex';
+                dashBtn.style.display = 'none';
+                profBtn.style.display = 'none';
             }
+        });
 
-            document.getElementById('login-btn').style.display = 'none';
-            document.getElementById('dash-btn').style.display = 'inline-flex';
-            document.getElementById('prof-btn').style.display = 'inline-flex';
+        // --- Защита от XSS ---
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
-        checkUser();
 
-        // Загрузка новостей (с пагинацией)
+        // --- Загрузка новостей ---
         async function loadNews() {
             try {
                 let q;
@@ -112,67 +124,77 @@
                 }
 
                 const querySnapshot = await getDocs(q);
-                if (querySnapshot.empty) { loadMoreBtn.style.display = 'none'; return; }
+                if (querySnapshot.empty) { 
+                    loadMoreBtn.style.display = 'none'; 
+                    if (isFirstLoad) newsContainer.innerHTML = '<p style="text-align:center; padding:20px;">Новостей пока нет.</p>';
+                    return; 
+                }
 
                 lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
                 loadMoreBtn.style.display = 'block';
 
+                // При первой загрузке очищаем контейнер и создаем каркас
                 if (isFirstLoad) {
                     newsContainer.innerHTML = '';
+                    
+                    // Создаем контейнер для сетки новостей (он понадобится, если новостей больше 1)
+                    gridContainer = document.createElement('div');
+                    gridContainer.className = 'news-grid';
+                    
                     isFirstLoad = false;
                 }
 
-                let isFirstNews = querySnapshot.size > 0 && lastVisible && newsContainer.innerHTML === '';
-                let gridHTML = isFirstNews ? '<div class="news-grid">' : '';
+                let isFirstNews = (lastVisible === querySnapshot.docs[querySnapshot.docs.length - 1] && newsContainer.innerHTML === '');
 
-                querySnapshot.forEach((doc) => {
+                querySnapshot.forEach((doc, index) => {
                     const data = doc.data();
-                    const dateStr = new Date(data.date.seconds * 1000).toLocaleDateString('ru-RU');
-                    const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=500';
                     
-                    // Заглушка для картинок
-                    const imgTag = `<img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=400'">`;
+                    let dateStr = 'Дата не указана';
+                    if (data.date && data.date.seconds) {
+                        dateStr = new Date(data.date.seconds * 1000).toLocaleDateString('ru-RU');
+                    }
+
+                    const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=500';
+                    const imgTag = `<img src="${escapeHTML(imgSrc)}" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=400'">`;
 
                     if (isFirstNews) {
-                        newsContainer.innerHTML += `
+                        // Первая новость — большая (Hero)
+                        const heroHTML = `
                             <a href="article.html?id=${doc.id}" class="hero-news" style="text-decoration: none; color: inherit;">
                                 ${imgTag}
                                 <div class="hero-text">
-                                    <span class="tag">${data.tag || 'НОВОСТЬ'}</span>
-                                    <h2>${data.title}</h2>
-                                    <p>${data.description || ''}</p>
+                                    <span class="tag">${escapeHTML(data.tag || 'НОВОСТЬ')}</span>
+                                    <h2>${escapeHTML(data.title)}</h2>
+                                    <p>${escapeHTML(data.description || '')}</p>
                                     <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
                                 </div>
                             </a>
                         `;
-                        isFirstNews = false;
+                        newsContainer.innerHTML += heroHTML;
+                        newsContainer.appendChild(gridContainer); // Добавляем сетку после Hero-новости
                     } else {
-                        gridHTML += `
+                        // Остальные новости — карточки в сетке
+                        const cardHTML = `
                             <a href="article.html?id=${doc.id}" class="news-card" style="text-decoration: none; color: inherit;">
                                 ${imgTag}
                                 <div class="card-content">
-                                    <span class="tag">${data.tag || 'НОВОСТЬ'}</span>
-                                    <h3>${data.title}</h3>
-                                    <p>${data.description || ''}</p>
+                                    <span class="tag">${escapeHTML(data.tag || 'НОВОСТЬ')}</span>
+                                    <h3>${escapeHTML(data.title)}</h3>
+                                    <p>${escapeHTML(data.description || '')}</p>
                                 </div>
                             </a>
                         `;
+                        gridContainer.innerHTML += cardHTML;
                     }
                 });
 
-                if (!isFirstNews) {
-                    gridHTML += '</div>';
-                    // Если мы грузим "ещё", добавляем новые карточки в конец
-                    if (newsContainer.innerHTML.includes('news-grid')) {
-                        const grid = newsContainer.querySelector('.news-grid');
-                        if (grid) grid.innerHTML += gridHTML.replace('<div class="news-grid">', '').replace('</div>', '');
-                    } else {
-                        newsContainer.innerHTML += gridHTML;
-                    }
-                }
-
             } catch (error) {
                 console.error("Ошибка:", error);
+                // Если это первая загрузка и произошла ошибка — показываем сообщение
+                if (isFirstLoad) {
+                    newsContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: #e74c3c;">Не удалось загрузить новости. Попробуйте позже.</p>';
+                    loadMoreBtn.style.display = 'none';
+                }
             }
         }
 
