@@ -19,7 +19,7 @@
     <a href="dashboard.html">← Назад в панель</a>
   </div>
 
-  <div class="box">
+  <div class="box" id="profile-box" style="display:none;">
     <h3>Сменить пароль</h3>
     <input type="password" id="old-pass" placeholder="Текущий пароль">
     <input type="password" id="new-pass" placeholder="Новый пароль">
@@ -37,7 +37,24 @@
     const db = getFirestore(app);
     const currentUser = localStorage.getItem('loggedInUser');
 
-    if (!currentUser) window.location.href = 'login.html';
+    let userDocId = null;
+
+    async function checkUser() {
+        if (!currentUser) { window.location.href = 'login.html'; return; }
+        
+        const q = query(collection(db, "users"), where("username", "==", currentUser));
+        const snap = await getDocs(q);
+        
+        if (snap.empty) {
+            localStorage.removeItem('loggedInUser');
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        userDocId = snap.docs[0].id;
+        document.getElementById('profile-box').style.display = 'block';
+    }
+    checkUser();
 
     async function hashPass(pass) {
         const msgBuffer = new TextEncoder().encode(pass);
@@ -50,23 +67,15 @@
         const newP = document.getElementById('new-pass').value;
         if(!oldP || !newP) return alert("Заполните поля!");
 
-        const q = query(collection(db, "users"), where("username", "==", currentUser));
-        const snap = await getDocs(q);
-
-        if(snap.empty) return alert("Ошибка: пользователь не найден.");
-
-        const userDoc = snap.docs[0];
-        const userData = userDoc.data();
+        const snap = await getDocs(query(collection(db, "users"), where("username", "==", currentUser)));
+        const userData = snap.docs[0].data();
         
-        // Проверяем старый пароль
         if (userData.passwordHash !== await hashPass(oldP)) {
             return alert("Старый пароль введен неверно!");
         }
 
-        // Обновляем на новый
-        const newHash = await hashPass(newP);
-        await updateDoc(doc(db, "users", userDoc.id), {
-            passwordHash: newHash
+        await updateDoc(doc(db, "users", userDocId), {
+            passwordHash: await hashPass(newP)
         });
 
         alert("Пароль успешно изменен!");
@@ -76,15 +85,10 @@
 
     window.deleteAccount = async function() {
         if(!confirm("Вы уверены? Аккаунт будет удален навсегда.")) return;
-
-        const q = query(collection(db, "users"), where("username", "==", currentUser));
-        const snap = await getDocs(q);
         
-        if(!snap.empty) {
-            await deleteDoc(doc(db, "users", snap.docs[0].id));
-            localStorage.removeItem('loggedInUser');
-            window.location.href = '../index.html'; // Выкидываем на главную
-        }
+        await deleteDoc(doc(db, "users", userDocId));
+        localStorage.removeItem('loggedInUser');
+        window.location.href = '../index.html';
     }
   </script>
 </body>
