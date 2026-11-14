@@ -23,13 +23,13 @@
 </head>
 <body>
   <div class="header">
-      <h2>Панель управления</h2>
-      <div>
-          <span id="welcome"></span>
-          <a href="../index.html" style="color: #d4af37;">На сайт</a> | 
-          <a href="profile.html">Профиль</a> |
-          <a href="#" onclick="logout()">Выйти</a>
-      </div>
+    <h2>Панель управления</h2>
+    <div>
+      <span id="welcome"></span>
+      <a href="../index.html">На сайт</a>
+      <a href="profile.html">Профиль</a>
+      <a href="#" onclick="logout()">Выйти</a>
+    </div>
   </div>
 
   <div class="container">
@@ -39,24 +39,20 @@
       <div class="tab" id="tab-users-btn" onclick="switchTab('tab-users')" style="display: none;">Пользователи</div>
     </div>
 
-    <!-- ВКЛАДКА: СТАТЬИ -->
     <div id="tab-articles" class="content active">
       <h3>Опубликованные новости</h3>
       <div id="articles-list">Загрузка...</div>
     </div>
 
-    <!-- ВКЛАДКА: СОЗДАТЬ -->
     <div id="tab-create" class="content">
       <h3>Новая новость</h3>
       <input type="text" id="title" placeholder="Заголовок">
-      <input type="text" id="tag" placeholder="Тег (Город, МВД, Криминал)">
       <input type="text" id="image" placeholder="Ссылка на картинку (URL)">
       <input type="text" id="description" placeholder="Краткое описание">
       <textarea id="text" placeholder="Полный текст" style="height: 150px;"></textarea>
       <button onclick="publish()">Опубликовать</button>
     </div>
 
-    <!-- ВКЛАДКА: ПОЛЬЗОВАТЕЛИ (Только для админа) -->
     <div id="tab-users" class="content">
       <h3>Управление пользователями</h3>
       <div id="users-list">Загрузка...</div>
@@ -66,7 +62,7 @@
   <script type="module">
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, orderBy, addDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, orderBy, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -76,12 +72,9 @@
         window.location.href = 'login.html';
     }
 
-    // Получаем данные о текущем пользователе (узнаем его роль)
     let userRole = 'journalist';
     async function checkRole() {
-        const q = query(collection(db, "users"), orderBy("username"));
-        // В идеале тут нужен прямой запрос по логину, но для простоты проверим
-        const qUser = query(collection(db, "users")); // Упростим для этого примера
+        const qUser = query(collection(db, "users"));
         const snapshot = await getDocs(qUser);
         snapshot.forEach(doc => {
             if(doc.data().username === currentUser) {
@@ -108,7 +101,6 @@
         window.location.href = 'login.html';
     }
 
-    // Загрузка статей
     async function loadArticles() {
         const list = document.getElementById('articles-list');
         const q = query(collection(db, "news"), orderBy("date", "desc"));
@@ -135,15 +127,13 @@
     }
     loadArticles();
 
-    // Удаление статьи
     window.deleteArticle = async function(id) {
         if (confirm("Вы уверены, что хотите удалить эту новость?")) {
             await deleteDoc(doc(db, "news", id));
-            loadArticles(); // Обновляем список
+            loadArticles();
         }
     }
 
-    // Публикация
     window.publish = async function() {
         const title = document.getElementById('title').value;
         const text = document.getElementById('text').value;
@@ -151,7 +141,7 @@
 
         await addDoc(collection(db, "news"), {
             title: title,
-            tag: document.getElementById('tag').value || 'Новость',
+            tag: 'Новость', // Тег ставится автоматически
             image: document.getElementById('image').value,
             description: document.getElementById('description').value,
             text: text,
@@ -161,15 +151,13 @@
         
         alert("Новость опубликована!");
         document.getElementById('title').value = '';
-        document.getElementById('tag').value = '';
         document.getElementById('image').value = '';
         document.getElementById('description').value = '';
         document.getElementById('text').value = '';
         loadArticles();
-        switchTab('tab-articles'); // Перекидываем на список
+        switchTab('tab-articles');
     }
 
-    // Загрузка пользователей (только для админа)
     async function loadUsers() {
         if (userRole !== 'admin') return;
         const list = document.getElementById('users-list');
@@ -198,7 +186,6 @@
         }
     }
     
-    // Подгружаем юзеров, если это админ
     setTimeout(() => { if(userRole === 'admin') loadUsers(); }, 1000);
 
   </script>
