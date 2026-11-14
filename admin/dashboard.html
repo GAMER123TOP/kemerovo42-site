@@ -14,7 +14,7 @@
     .tab.active { background: #0b1b3d; color: white; }
     .content { display: none; }
     .content.active { display: block; }
-    input, button { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+    input, select, button { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
     button { background: #d4af37; border: none; font-weight: bold; cursor: pointer; }
     .btn-danger { background: #e74c3c; color: white; }
     .article-item, .user-item { border-bottom: 1px solid #eee; padding: 15px 0; display: flex; justify-content: space-between; align-items: center; }
@@ -36,9 +36,9 @@
 
   <div class="container">
     <div class="tabs">
-      <div class="tab active" onclick="switchTab('tab-articles')">Статьи</div>
-      <div class="tab" onclick="switchTab('tab-create')">Создать</div>
-      <div class="tab" id="tab-users-btn" onclick="switchTab('tab-users')" style="display: none;">Пользователи</div>
+      <div class="tab active" onclick="switchTab('tab-articles', event)">Статьи</div>
+      <div class="tab" onclick="switchTab('tab-create', event)">Создать</div>
+      <div class="tab" id="tab-users-btn" onclick="switchTab('tab-users', event)" style="display: none;">Пользователи</div>
     </div>
 
     <div id="tab-articles" class="content active">
@@ -49,6 +49,12 @@
     <div id="tab-create" class="content">
       <h3>Новая новость</h3>
       <input type="text" id="title" placeholder="Заголовок (макс 100 символов)" maxlength="100">
+      <select id="tag">
+        <option value="Новость">Обычная новость</option>
+        <option value="Криминал">Криминал</option>
+        <option value="Город">Город</option>
+        <option value="О МВД">О МВД</option>
+      </select>
       <input type="text" id="image" placeholder="Ссылка на картинку (URL)">
       <input type="text" id="description" placeholder="Краткое описание (макс 200 символов)" maxlength="200">
       
@@ -59,6 +65,7 @@
 
     <div id="tab-users" class="content">
       <h3>Управление пользователями</h3>
+      <p class="small-text" style="margin-bottom: 15px;">Внимание: редакторы создаются через консоль Firebase Auth. Здесь отображаются их профили.</p>
       <div id="users-list">Загрузка...</div>
     </div>
   </div>
@@ -68,10 +75,12 @@
   <script type="module">
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, orderBy, addDoc, deleteDoc, doc, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, orderBy, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
 
     const quill = new Quill('#editor-container', {
         theme: 'snow',
@@ -87,30 +96,25 @@
         }
     });
 
-    const currentUser = localStorage.getItem('loggedInUser');
+    let currentUserEmail = null;
     let userRole = 'journalist';
 
-    // СТРОГАЯ ПРОВЕРКА: Существует ли юзер в базе?
-    async function checkUserExistence() {
-        if (!currentUser) {
-            window.location.href = 'login.html';
-            return;
+    // --- Безопасная проверка авторизации через Firebase ---
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) { 
+            window.location.href = 'login.html'; 
+            return; 
         }
-
-        const q = query(collection(db, "users"), where("username", "==", currentUser));
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-            // Если юзера удалили, выкидываем его
-            localStorage.removeItem('loggedInUser');
-            alert("Ваш аккаунт был удален администратором.");
-            window.location.href = 'login.html';
-            return;
-        }
-
-        // Если юзер есть, берем его роль
-        userRole = snapshot.docs[0].data().role || 'journalist';
-        document.getElementById('welcome').innerText = `${currentUser} (${userRole})`;
+        
+        currentUserEmail = user.email;
+        const token = await user.getIdTokenResult();
+        
+        // Берем роль из клеймов Firebase
+        userRole = token.claims.admin ? 'admin' : (token.claims.editor ? 'editor' : 'journalist');
+        
+        // Выводим логин без домена для красоты (admin@kemerovo42.local -> admin)
+        const displayName = currentUserEmail.split('@')[0]; 
+        document.getElementById('welcome').innerText = `${displayName} (${userRole})`;
 
         if (userRole === 'admin') {
             document.getElementById('tab-users-btn').style.display = 'block';
@@ -118,51 +122,65 @@
         }
         
         loadArticles();
-    }
+    });
 
-    window.switchTab = function(tabId) {
+    window.switchTab = function(tabId, event) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-        event.target.classList.add('active');
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
         document.getElementById(tabId).classList.add('active');
     }
 
-    window.logout = function() {
-        localStorage.removeItem('loggedInUser');
+    window.logout = async function() {
+        await signOut(auth);
         window.location.href = 'login.html';
     }
 
     async function loadArticles() {
         const list = document.getElementById('articles-list');
-        const snapshot = await getDocs(query(collection(db, "news"), orderBy("date", "desc")));
-        
-        list.innerHTML = '';
-        if(snapshot.empty) { list.innerHTML = 'Новостей нет.'; return; }
+        try {
+            const snapshot = await getDocs(query(collection(db, "news"), orderBy("date", "desc")));
+            list.innerHTML = '';
+            if(snapshot.empty) { list.innerHTML = 'Новостей нет.'; return; }
 
-        snapshot.forEach(docSnap => {
-            const data = docSnap.data();
-            const dateStr = new Date(data.date.seconds * 1000).toLocaleDateString('ru-RU');
-            list.innerHTML += `
-                <div class="article-item">
-                    <div>
-                        <div class="article-title">${data.title}</div>
-                        <div class="small-text">Автор: ${data.author || 'Неизвестен'} | ${dateStr}</div>
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                let dateStr = 'Дата не указана';
+                if (data.date && data.date.seconds) {
+                    dateStr = new Date(data.date.seconds * 1000).toLocaleDateString('ru-RU');
+                }
+                
+                list.innerHTML += `
+                    <div class="article-item">
+                        <div>
+                            <div class="article-title">${data.title}</div>
+                            <div class="small-text">Автор: ${data.author || 'Неизвестен'} | ${data.tag || 'Новость'} | ${dateStr}</div>
+                        </div>
+                        <button class="btn-danger" onclick="deleteArticle('${docSnap.id}')" style="width: auto; margin: 0;">Удалить</button>
                     </div>
-                    <button class="btn-danger" onclick="deleteArticle('${docSnap.id}')" style="width: auto; margin: 0;">Удалить</button>
-                </div>
-            `;
-        });
+                `;
+            });
+        } catch (e) {
+            list.innerHTML = '<span style="color:red">Ошибка загрузки. Проверьте права доступа.</span>';
+        }
     }
 
     window.deleteArticle = async function(id) {
         if (confirm("Удалить новость?")) {
-            await deleteDoc(doc(db, "news", id));
-            loadArticles();
+            try {
+                await deleteDoc(doc(db, "news", id));
+                loadArticles();
+            } catch (e) {
+                alert("Ошибка удаления (нет прав?)");
+            }
         }
     }
 
     window.publish = async function() {
         const title = document.getElementById('title').value;
+        const tag = document.getElementById('tag').value;
         const text = quill.root.innerHTML;
         
         if(!title || quill.getText().trim() === '') return alert("Заполните заголовок и текст!");
@@ -170,11 +188,11 @@
         try {
             await addDoc(collection(db, "news"), {
                 title: title,
-                tag: 'Новость',
+                tag: tag,
                 image: document.getElementById('image').value || '',
                 description: document.getElementById('description').value || '',
                 text: text,
-                author: currentUser,
+                author: currentUserEmail.split('@')[0],
                 date: new Date()
             });
             
@@ -184,42 +202,48 @@
             document.getElementById('description').value = '';
             quill.root.innerHTML = '';
             loadArticles();
-            switchTab('tab-articles');
+            switchTab('tab-articles', { target: document.querySelector('.tab') }); // Возврат на первую вкладку
         } catch (error) {
             console.error(error);
-            alert("Ошибка публикации! Проверьте правила Firebase (Rules).");
+            alert("Ошибка публикации! У вас есть права редактора?");
         }
     }
 
     async function loadUsers() {
         if (userRole !== 'admin') return;
         const list = document.getElementById('users-list');
-        const snapshot = await getDocs(collection(db, "users"));
-        
-        list.innerHTML = '';
-        snapshot.forEach(docSnap => {
-            const data = docSnap.data();
-            list.innerHTML += `
-                <div class="user-item">
-                    <div>
-                        <div class="article-title">${data.username}</div>
-                        <div class="small-text">Роль: ${data.role || 'journalist'}</div>
+        try {
+            const snapshot = await getDocs(collection(db, "users"));
+            list.innerHTML = '';
+            if(snapshot.empty) { list.innerHTML = 'Профилей в базе нет.'; return; }
+            
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                list.innerHTML += `
+                    <div class="user-item">
+                        <div>
+                            <div class="article-title">${data.displayName || data.username || 'Без имени'}</div>
+                            <div class="small-text">Роль: ${data.role || 'Не указана'}</div>
+                        </div>
+                        <button class="btn-danger" onclick="deleteUser('${docSnap.id}')" style="width: auto; margin: 0;">Удалить профиль</button>
                     </div>
-                    <button class="btn-danger" onclick="deleteUser('${docSnap.id}')" style="width: auto; margin: 0;">Удалить</button>
-                </div>
-            `;
-        });
-    }
-
-    window.deleteUser = async function(id) {
-        if (confirm("Удалить пользователя?")) {
-            await deleteDoc(doc(db, "users", id));
-            loadUsers();
+                `;
+            });
+        } catch (e) {
+            list.innerHTML = '<span style="color:red">Ошибка загрузки пользователей.</span>';
         }
     }
 
-    // Запускаем проверку при загрузке
-    checkUserExistence();
+    window.deleteUser = async function(id) {
+        if (confirm("Удалить профиль из базы? (Сам аккаунт в Firebase Auth останется)")) {
+            try {
+                await deleteDoc(doc(db, "users", id));
+                loadUsers();
+            } catch (e) {
+                alert("Ошибка удаления (нет прав?)");
+            }
+        }
+    }
   </script>
 </body>
 </html>
