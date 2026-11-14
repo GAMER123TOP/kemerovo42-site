@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Вход | Кемерово 42</title>
+  <style>
+    body { background: #0b1b3d; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; margin: 0; }
+    .box { background: #1a2f5a; padding: 40px; border-radius: 12px; width: 300px; border: 2px solid #d4af37; }
+    input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; box-sizing: border-box; }
+    button { width: 100%; padding: 10px; background: #d4af37; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .error { color: #e74c3c; font-size: 14px; text-align: center; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2 style="text-align:center;">Вход в редакцию</h2>
+    <input type="text" id="username" placeholder="Логин">
+    <input type="password" id="password" placeholder="Пароль">
+    <button onclick="login()">Войти</button>
+    <div id="error" class="error"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = { /* ТВОЙ КОНФИГ */ };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function hashPass(pass) {
+        const msgBuffer = new TextEncoder().encode(pass);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    window.login = async function() {
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        const errorDiv = document.getElementById('error');
+
+        if(!user || !pass) { errorDiv.innerText = "Заполните все поля"; return; }
+
+        const hashedPass = await hashPass(pass);
+        const q = query(collection(db, "users"), where("username", "==", user));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            errorDiv.innerText = "Пользователь не найден";
+            return;
+        }
+
+        const userData = querySnapshot.docs[0].data();
+        if (userData.passwordHash === hashedPass) {
+            localStorage.setItem('loggedInUser', user);
+            window.location.href = 'dashboard.html';
+        } else {
+            errorDiv.innerText = "Неверный пароль";
+        }
+    }
+  </script>
+</body>
+</html>
