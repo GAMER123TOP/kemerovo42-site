@@ -18,7 +18,7 @@
                 <p>Официальный новостной портал</p>
             </div>
             <div class="auth-buttons">
-                <a href="/admin/" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Войти</a>
+                <a href="/admin/login.html" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Войти</a>
             </div>
             <button id="theme-toggle"><i class="fas fa-moon"></i> Тёмная тема</button>
         </div>
@@ -34,53 +34,8 @@
 
     <div class="container">
         <main class="main-content">
-            <a href="article.html" class="hero-news" style="text-decoration: none; color: inherit;">
-                <img src="https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=500" alt="Главная новость">
-                <div class="hero-text">
-                    <span class="tag">🚨 СРОЧНО</span>
-                    <h2>ТЕРАКТ В ОФИСЕ: Подробности спецоперации ФСБ</h2>
-                    <p>Сегодня в 13:10 в здание ворвались неизвестные в камуфляже. В результате нападения есть погибшие. На место прибыли спецслужбы. Подробности в нашем материале...</p>
-                    <span class="date"><i class="far fa-clock"></i> 14 Ноября 2026</span>
-                </div>
-            </a>
-
-            <div class="news-grid">
-                <a href="article.html" class="news-card" style="text-decoration: none; color: inherit;">
-                    <img src="https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&q=80&w=400&h=250" alt="ДТП">
-                    <div class="card-content">
-                        <span class="tag">Город</span>
-                        <h3>Массовое ДТП на мосту</h3>
-                        <p>Сотрудники ОГАИ перекрыли движение из-за аварии с участием трех автомобилей.</p>
-                    </div>
-                </a>
-
-                <a href="article.html" class="news-card" style="text-decoration: none; color: inherit;">
-                    <img src="https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=400&h=250" alt="Награды">
-                    <div class="card-content">
-                        <span class="tag">МВД</span>
-                        <h3>Генерал Табанин вручил награды</h3>
-                        <p>За успешную операцию по спасению заложников сотрудники были награждены медалями «За отвагу».</p>
-                    </div>
-                </a>
-
-                <a href="article.html" class="news-card" style="text-decoration: none; color: inherit;">
-                    <img src="https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&q=80&w=400&h=250" alt="КОПГ">
-                    <div class="card-content">
-                        <span class="tag">Криминал</span>
-                        <h3>ФСБ задержала участников КОПГ</h3>
-                        <p>В ходе спецоперации были задержаны лица, причастные к нападению на офис.</p>
-                    </div>
-                </a>
-                
-                <a href="article.html" class="news-card" style="text-decoration: none; color: inherit;">
-                    <img src="https://images.unsplash.com/photo-1478265409131-1f65c88f965c?auto=format&fit=crop&q=80&w=400&h=250" alt="Погода">
-                    <div class="card-content">
-                        <span class="tag">Город</span>
-                        <h3>Аномальные морозы в Кемерово</h3>
-                        <p>Синоптики предупреждают о понижении температуры до -35°. Открыты пункты обогрева.</p>
-                    </div>
-                </a>
-            </div>
+            <!-- Сюда грузятся новости -->
+            <div id="news-container"><p style="text-align: center; padding: 20px;">Загрузка новостей...</p></div>
         </main>
 
         <aside class="sidebar">
@@ -88,16 +43,7 @@
                 <h3><i class="fas fa-bolt" style="color: #d4af37;"></i> Молния</h3>
                 <ul class="live-feed">
                     <li><span class="time">14:30</span> Спецназ завершил операцию в офисе. Задержаны 4 участника КОПГ.</li>
-                    <li><span class="time">14:10</span> На место прибыли сотрудники ФСБ и СК РФ. Здание оцеплено.</li>
-                    <li><span class="time">13:50</span> Пострадавшая депутат доставлена в больницу.</li>
-                    <li><span class="time">13:10</span> Экстренные службы получили сигнал о стрельбе в офисе.</li>
                 </ul>
-            </div>
-
-            <div class="widget">
-                <h3><i class="fas fa-search"></i> Внимание, розыск!</h3>
-                <img src="https://images.unsplash.com/photo-1509248961158-e54f6934749c?auto=format&fit=crop&q=80&w=300&h=200" alt="Розыск" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
-                <p>Разыскиваются лица, причастные к деятельности КОПГ. Если вы обладаете информацией, сообщите в дежурную часть.</p>
             </div>
         </aside>
     </div>
@@ -106,6 +52,84 @@
         <p>&copy; 2026 Телепрограмма «Кемерово 42». Все права защищены.</p>
     </footer>
 
+    <!-- Подключаем Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // ВСТАВЬ СЮДА СВОЙ КОНФИГ ИЗ FIREBASE
+        const firebaseConfig = {
+            apiKey: "ТВОЙ_API_KEY",
+            authDomain: "ТВОЙ_PROJECT_ID.firebaseapp.com",
+            projectId: "ТВОЙ_PROJECT_ID",
+            storageBucket: "ТВОЙ_PROJECT_ID.appspot.com",
+            messagingSenderId: "ТВОЙ_SENDER_ID",
+            appId: "ТВОЙ_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const newsContainer = document.getElementById('news-container');
+
+        async function loadNews() {
+            try {
+                // Берем новости, сортируем по дате (сначала новые)
+                const q = query(collection(db, "news"), orderBy("date", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    newsContainer.innerHTML = '<p style="text-align: center; padding: 20px;">Новостей пока нет.</p>';
+                    return;
+                }
+
+                let isFirst = true;
+                let gridHTML = '<div class="news-grid">';
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const dateStr = new Date(data.date.seconds * 1000).toLocaleDateString('ru-RU');
+                    const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=500'; // Картинка по умолчанию
+                    
+                    if (isFirst) {
+                        // Первая новость — большая
+                        newsContainer.innerHTML = `
+                            <a href="article.html?id=${doc.id}" class="hero-news" style="text-decoration: none; color: inherit;">
+                                <img src="${imgSrc}" alt="Фото">
+                                <div class="hero-text">
+                                    <span class="tag">🚨 ${data.tag || 'НОВОСТЬ'}</span>
+                                    <h2>${data.title}</h2>
+                                    <p>${data.description || ''}</p>
+                                    <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
+                                </div>
+                            </a>
+                        `;
+                        isFirst = false;
+                    } else {
+                        // Остальные — карточки
+                        gridHTML += `
+                            <a href="article.html?id=${doc.id}" class="news-card" style="text-decoration: none; color: inherit;">
+                                <img src="${imgSrc}" alt="Фото">
+                                <div class="card-content">
+                                    <span class="tag">${data.tag || 'НОВОСТЬ'}</span>
+                                    <h3>${data.title}</h3>
+                                    <p>${data.description || ''}</p>
+                                </div>
+                            </a>
+                        `;
+                    }
+                });
+
+                gridHTML += '</div>';
+                newsContainer.innerHTML += gridHTML;
+
+            } catch (error) {
+                console.error("Ошибка загрузки:", error);
+                newsContainer.innerHTML = `<p style="color:red; text-align:center;">Ошибка загрузки новостей.</p>`;
+            }
+        }
+
+        loadNews();
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
