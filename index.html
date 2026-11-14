@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кемерово 42 | Главные новости</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Шапка -->
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <a href="index.html" style="text-decoration: none; color: white;">
+                    <h1>КЕМЕРОВО <span>42</span></h1>
+                </a>
+                <p>Официальный новостной портал</p>
+            </div>
+            <div class="auth-buttons">
+                <!-- Кнопка Войти ведет в админку -->
+                <a href="/admin/" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Войти</a>
+                <button id="register-btn" class="btn-solid">Зарегистрироваться</button>
+            </div>
+            <button id="theme-toggle"><i class="fas fa-moon"></i> Тёмная тема</button>
+        </div>
+    </header>
+
+    <!-- Навигация -->
+    <nav>
+        <a href="index.html" class="active">Главная</a>
+        <a href="#">Криминал</a>
+        <a href="#">Город</a>
+        <a href="#">О МВД</a>
+        <a href="#">Розыск</a>
+    </nav>
+
+    <!-- Основной контент -->
+    <div class="container">
+
+        <!-- Левая колонка (Новости) -->
+        <main class="main-content">
+            
+            <!-- Главная новость -->
+            <a href="article.html" class="hero-news" style="text-decoration: none; color: inherit;">
+                <img src="https://via.placeholder.com/1200x500/0b1b3d/ffffff?text=ТЕРАКТ+В+ОФИСЕ" alt="Главная новость">
+                <div class="hero-text">
+                    <span class="tag">🚨 СРОЧНО</span>
+                    <h2>ТЕРАКТ В ОФИСЕ: Подробности спецоперации ФСБ</h2>
+                    <p>Сегодня в 13:10 в здание ворвались неизвестные в камуфляже. В результате нападения есть погибшие. На место прибыли спецслужбы. Подробности в нашем материале...</p>
+                    <span class="date"><i class="far fa-clock"></i> 14 Ноября 2026</span>
+                </div>
+            </a>
+
+            <!-- Сетка новостей -->
+            <div class="news-grid">
+                <a href="article.html" class="news-card" style="text-decoration: none; color: inherit;">
+                    <img src="https://via.placeholder.com/400x250/333/fff?text=ДТП" alt="ДТП">
+                    <div class="card-content">
+                        <span class="tag">Город</span>
+                        <h3>Массовое ДТП на мосту</h3>
+                        <p>Сотрудники ОГАИ перекрыли движение из-за аварии с участием трех автомобилей.</p>
+                    </div>
+                </a>
+
+                <a href="article.html" class="news-card" style="text-decoration: none; color: inherit;">
+                    <img src="https://via.placeholder.com/400x250/333/fff?text=НАГРАЖДЕНИЕ" alt="Награды">
+                    <div class="card-content">
+                        <span class="tag">МВД</span>
+                        <h3>Генерал Табанин вручил награды</h3>
+                        <p>За успешную операцию по спасению заложников сотрудники были награждены медалями «За отвагу».</p>
+                    </div>
+                </a>
+
+                <a href="article.html" class="news-card" style="text-decoration: none; color: inherit;">
+                    <img src="https://via.placeholder.com/400x250/333/fff?text=КОПГ" alt="КОПГ">
+                    <div class="card-content">
+                        <span class="tag">Криминал</span>
+                        <h3>ФСБ задержала участников КОПГ</h3>
+                        <p>В ходе спецоперации были задержаны лица, причастные к нападению на офис.</p>
+                    </div>
+                </a>
+                
+                <a href="article.html" class="news-card" style="text-decoration: none; color: inherit;">
+                    <img src="https://via.placeholder.com/400x250/333/fff?text=ПОГОДА" alt="Погода">
+                    <div class="card-content">
+                        <span class="tag">Город</span>
+                        <h3>Аномальные морозы в Кемерово</h3>
+                        <p>Синоптики предупреждают о понижении температуры до -35°. Открыты пункты обогрева.</p>
+                    </div>
+                </a>
+            </div>
+        </main>
+
+        <!-- Правая колонка (Сайдбар) -->
+        <aside class="sidebar">
+            <div class="widget">
+                <h3><i class="fas fa-bolt" style="color: #d4af37;"></i> Молния</h3>
+                <ul class="live-feed">
+                    <li><span class="time">14:30</span> Спецназ завершил операцию в офисе. Задержаны 4 участника КОПГ.</li>
+                    <li><span class="time">14:10</span> На место прибыли сотрудники ФСБ и СК РФ. Здание оцеплено.</li>
+                    <li><span class="time">13:50</span> Пострадавшая депутат доставлена в больницу.</li>
+                    <li><span class="time">13:10</span> Экстренные службы получили сигнал о стрельбе в офисе.</li>
+                </ul>
+            </div>
+
+            <div class="widget">
+                <h3><i class="fas fa-search"></i> Внимание, розыск!</h3>
+                <img src="https://via.placeholder.com/300x200/555/fff?text=ФОТОРОБОТ" alt="Розыск" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                <p>Разыскиваются лица, причастные к деятельности КОПГ. Если вы обладаете информацией, сообщите в дежурную часть.</p>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Модальное окно регистрации -->
+    <div id="register-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Заявка на регистрацию</h2>
+            <p style="font-size: 0.9em; color: #888; margin-bottom: 15px;">После отправки заявка уйдет на модерацию в Discord.</p>
+            <form id="register-form">
+                <label>Ваш Nickname (в Discord):</label>
+                <input type="text" id="discord-nick" required placeholder="Например: Gamer123">
+
+                <label>Ваше ФИО (в РП):</label>
+                <input type="text" id="rp-name" required placeholder="Иванов И.И.">
+                
+                <button type="submit" class="btn-solid" style="width: 100%; margin-top: 15px;">Отправить заявку</button>
+            </form>
+            <div id="form-status" style="margin-top: 15px; font-size: 0.9em; text-align: center;"></div>
+        </div>
+    </div>
+
+    <!-- Подвал -->
+    <footer>
+        <p>&copy; 2026 Телепрограмма «Кемерово 42». Все права защищены.</p>
+    </footer>
+
+    <!-- Подключаем скрипт -->
+    <script src="script.js"></script>
+</body>
+</html>
