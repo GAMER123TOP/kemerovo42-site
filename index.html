@@ -6,6 +6,15 @@
     <title>Кемерово 42 | Главные новости</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Защита от длинных заголовков */
+        .hero-text h2, .card-content h3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3; /* Максимум 3 строки */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
 </head>
 <body>
 
@@ -36,64 +45,98 @@
     <div class="container">
         <main class="main-content">
             <div id="news-container"><p style="text-align: center; padding: 20px;">Загрузка новостей...</p></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="load-more-btn" onclick="loadMore()" style="display: none; padding: 10px 20px; background: #d4af37; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Показать еще</button>
+            </div>
         </main>
 
         <aside class="sidebar">
             <div class="widget">
                 <h3><i class="fas fa-bolt" style="color: #d4af37;"></i> Молния</h3>
                 <ul class="live-feed">
-                    <li><span class="time">14:30</span> Спецназ завершил операцию в офисе. Задержаны 4 участника КОПГ.</li>
-                    <li><span class="time">14:10</span> На место прибыли сотрудники ФСБ и СК РФ. Здание оцеплено.</li>
+                    <li><span class="time">14:30</span> Спецназ завершил операцию в офисе.</li>
                 </ul>
             </div>
         </aside>
     </div>
 
     <footer>
-        <p>&copy; 2026 Телепрограмма «Кемерово 42». Все права защищены.</p>
+        <p>&copy; 2026 Телепрограмма «Кемерово 42».</p>
     </footer>
 
-    <!-- Скрипт проверки авторизации -->
-    <script>
-        const loggedInUser = localStorage.getItem('loggedInUser');
-        if (loggedInUser) {
-            document.getElementById('login-btn').style.display = 'none';
-            document.getElementById('dash-btn').style.display = 'inline-flex';
-            document.getElementById('prof-btn').style.display = 'inline-flex';
-        }
-    </script>
-
+    <!-- Скрипт авторизации и загрузки -->
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const newsContainer = document.getElementById('news-container');
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        
+        const NEWS_PER_PAGE = 10; // Количество новостей на страницу
+        let lastVisible = null;
+        let isFirstLoad = true;
 
+        // Проверка авторизации (если юзера удалили, выкидываем)
+        async function checkUser() {
+            const loggedInUser = localStorage.getItem('loggedInUser');
+            if (!loggedInUser) return;
+
+            const q = query(collection(db, "users"), where("username", "==", loggedInUser));
+            const snap = await getDocs(q);
+            
+            if (snap.empty) {
+                // Пользователь был удален, сбрасываем сессию
+                localStorage.removeItem('loggedInUser');
+                return;
+            }
+
+            document.getElementById('login-btn').style.display = 'none';
+            document.getElementById('dash-btn').style.display = 'inline-flex';
+            document.getElementById('prof-btn').style.display = 'inline-flex';
+        }
+        checkUser();
+
+        // Загрузка новостей (с пагинацией)
         async function loadNews() {
             try {
-                const q = query(collection(db, "news"), orderBy("date", "desc"));
-                const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) {
-                    newsContainer.innerHTML = '<p style="text-align: center; padding: 20px;">Новостей пока нет.</p>';
+                let q;
+                if (isFirstLoad) {
+                    q = query(collection(db, "news"), orderBy("date", "desc"), limit(NEWS_PER_PAGE));
+                } else if (lastVisible) {
+                    q = query(collection(db, "news"), orderBy("date", "desc"), startAfter(lastVisible), limit(NEWS_PER_PAGE));
+                } else {
                     return;
                 }
 
-                let isFirst = true;
-                let gridHTML = '<div class="news-grid">';
+                const querySnapshot = await getDocs(q);
+                if (querySnapshot.empty) { loadMoreBtn.style.display = 'none'; return; }
+
+                lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+                loadMoreBtn.style.display = 'block';
+
+                if (isFirstLoad) {
+                    newsContainer.innerHTML = '';
+                    isFirstLoad = false;
+                }
+
+                let isFirstNews = querySnapshot.size > 0 && lastVisible && newsContainer.innerHTML === '';
+                let gridHTML = isFirstNews ? '<div class="news-grid">' : '';
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     const dateStr = new Date(data.date.seconds * 1000).toLocaleDateString('ru-RU');
                     const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=500';
                     
-                    if (isFirst) {
-                        newsContainer.innerHTML = `
+                    // Заглушка для картинок
+                    const imgTag = `<img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=400'">`;
+
+                    if (isFirstNews) {
+                        newsContainer.innerHTML += `
                             <a href="article.html?id=${doc.id}" class="hero-news" style="text-decoration: none; color: inherit;">
-                                <img src="${imgSrc}" alt="Фото">
+                                ${imgTag}
                                 <div class="hero-text">
                                     <span class="tag">${data.tag || 'НОВОСТЬ'}</span>
                                     <h2>${data.title}</h2>
@@ -102,11 +145,11 @@
                                 </div>
                             </a>
                         `;
-                        isFirst = false;
+                        isFirstNews = false;
                     } else {
                         gridHTML += `
                             <a href="article.html?id=${doc.id}" class="news-card" style="text-decoration: none; color: inherit;">
-                                <img src="${imgSrc}" alt="Фото">
+                                ${imgTag}
                                 <div class="card-content">
                                     <span class="tag">${data.tag || 'НОВОСТЬ'}</span>
                                     <h3>${data.title}</h3>
@@ -117,14 +160,23 @@
                     }
                 });
 
-                gridHTML += '</div>';
-                newsContainer.innerHTML += gridHTML;
+                if (!isFirstNews) {
+                    gridHTML += '</div>';
+                    // Если мы грузим "ещё", добавляем новые карточки в конец
+                    if (newsContainer.innerHTML.includes('news-grid')) {
+                        const grid = newsContainer.querySelector('.news-grid');
+                        if (grid) grid.innerHTML += gridHTML.replace('<div class="news-grid">', '').replace('</div>', '');
+                    } else {
+                        newsContainer.innerHTML += gridHTML;
+                    }
+                }
 
             } catch (error) {
-                console.error("Ошибка загрузки:", error);
-                newsContainer.innerHTML = `<p style="color:red; text-align:center;">Ошибка загрузки новостей.</p>`;
+                console.error("Ошибка:", error);
             }
         }
+
+        window.loadMore = function() { loadNews(); };
         loadNews();
     </script>
     <script src="script.js"></script>
