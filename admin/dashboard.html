@@ -2,35 +2,70 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <title>Рабочий стол | Кемерово 42</title>
+  <title>Панель управления | Кемерово 42</title>
   <style>
-    body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
-    .admin-box { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-    input, textarea { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
-    button { padding: 10px 20px; background: #d4af37; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
-    .header { display: flex; justify-content: space-between; align-items: center; max-width: 600px; margin: 0 auto 20px auto; }
+    body { font-family: sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
+    .header { display: flex; justify-content: space-between; align-items: center; background: #0b1b3d; color: white; padding: 15px 30px; border-bottom: 4px solid #d4af37; }
+    .header a { color: #d4af37; text-decoration: none; margin-left: 20px; font-weight: bold; }
+    .container { max-width: 900px; margin: 30px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab { padding: 10px 20px; cursor: pointer; background: #e0e0e0; border-radius: 5px; font-weight: bold; }
+    .tab.active { background: #0b1b3d; color: white; }
+    .content { display: none; }
+    .content.active { display: block; }
+    input, textarea, button { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+    button { background: #d4af37; border: none; font-weight: bold; cursor: pointer; }
+    .btn-danger { background: #e74c3c; color: white; }
+    .article-item, .user-item { border-bottom: 1px solid #eee; padding: 15px 0; display: flex; justify-content: space-between; align-items: center; }
+    .article-title { font-weight: bold; font-size: 1.1em; }
+    .small-text { font-size: 0.8em; color: #777; }
   </style>
 </head>
 <body>
   <div class="header">
-    <h2>Редакция</h2>
-    <div><span id="welcome"></span> | <button onclick="logout()" style="background: #e74c3c; color: white;">Выйти</button></div>
+    <h2>Панель управления</h2>
+    <div>
+      <span id="welcome"></span>
+      <a href="profile.html">Профиль</a>
+      <a href="#" onclick="logout()">Выйти</a>
+    </div>
   </div>
 
-  <div class="admin-box">
-    <h3>Новая новость</h3>
-    <input type="text" id="title" placeholder="Заголовок">
-    <input type="text" id="tag" placeholder="Тег (Город, МВД, Криминал)">
-    <input type="text" id="image" placeholder="Ссылка на картинку (URL)">
-    <input type="text" id="description" placeholder="Краткое описание">
-    <textarea id="text" placeholder="Полный текст" style="height: 150px;"></textarea>
-    <button onclick="publish()">Опубликовать</button>
+  <div class="container">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('tab-articles')">Статьи</div>
+      <div class="tab" onclick="switchTab('tab-create')">Создать</div>
+      <div class="tab" id="tab-users-btn" onclick="switchTab('tab-users')" style="display: none;">Пользователи</div>
+    </div>
+
+    <!-- ВКЛАДКА: СТАТЬИ -->
+    <div id="tab-articles" class="content active">
+      <h3>Опубликованные новости</h3>
+      <div id="articles-list">Загрузка...</div>
+    </div>
+
+    <!-- ВКЛАДКА: СОЗДАТЬ -->
+    <div id="tab-create" class="content">
+      <h3>Новая новость</h3>
+      <input type="text" id="title" placeholder="Заголовок">
+      <input type="text" id="tag" placeholder="Тег (Город, МВД, Криминал)">
+      <input type="text" id="image" placeholder="Ссылка на картинку (URL)">
+      <input type="text" id="description" placeholder="Краткое описание">
+      <textarea id="text" placeholder="Полный текст" style="height: 150px;"></textarea>
+      <button onclick="publish()">Опубликовать</button>
+    </div>
+
+    <!-- ВКЛАДКА: ПОЛЬЗОВАТЕЛИ (Только для админа) -->
+    <div id="tab-users" class="content">
+      <h3>Управление пользователями</h3>
+      <div id="users-list">Загрузка...</div>
+    </div>
   </div>
 
   <script type="module">
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, orderBy, addDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -38,8 +73,33 @@
     const currentUser = localStorage.getItem('loggedInUser');
     if (!currentUser) {
         window.location.href = 'login.html';
-    } else {
-        document.getElementById('welcome').innerText = "Вы вошли как: " + currentUser;
+    }
+
+    // Получаем данные о текущем пользователе (узнаем его роль)
+    let userRole = 'journalist';
+    async function checkRole() {
+        const q = query(collection(db, "users"), orderBy("username"));
+        // В идеале тут нужен прямой запрос по логину, но для простоты проверим
+        const qUser = query(collection(db, "users")); // Упростим для этого примера
+        const snapshot = await getDocs(qUser);
+        snapshot.forEach(doc => {
+            if(doc.data().username === currentUser) {
+                userRole = doc.data().role || 'journalist';
+            }
+        });
+        
+        document.getElementById('welcome').innerText = `${currentUser} (${userRole})`;
+        if (userRole === 'admin') {
+            document.getElementById('tab-users-btn').style.display = 'block';
+        }
+    }
+    checkRole();
+
+    window.switchTab = function(tabId) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
     }
 
     window.logout = function() {
@@ -47,10 +107,45 @@
         window.location.href = 'login.html';
     }
 
+    // Загрузка статей
+    async function loadArticles() {
+        const list = document.getElementById('articles-list');
+        const q = query(collection(db, "news"), orderBy("date", "desc"));
+        const snapshot = await getDocs(q);
+        
+        list.innerHTML = '';
+        if(snapshot.empty) { list.innerHTML = 'Новостей нет.'; return; }
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            const dateStr = new Date(data.date.seconds * 1000).toLocaleDateString('ru-RU');
+            
+            const div = document.createElement('div');
+            div.className = 'article-item';
+            div.innerHTML = `
+                <div>
+                    <div class="article-title">${data.title}</div>
+                    <div class="small-text">Автор: ${data.author || 'Неизвестен'} | Дата: ${dateStr}</div>
+                </div>
+                <button class="btn-danger" onclick="deleteArticle('${docSnap.id}')" style="width: auto; margin: 0;">Удалить</button>
+            `;
+            list.appendChild(div);
+        });
+    }
+    loadArticles();
+
+    // Удаление статьи
+    window.deleteArticle = async function(id) {
+        if (confirm("Вы уверены, что хотите удалить эту новость?")) {
+            await deleteDoc(doc(db, "news", id));
+            loadArticles(); // Обновляем список
+        }
+    }
+
+    // Публикация
     window.publish = async function() {
         const title = document.getElementById('title').value;
         const text = document.getElementById('text').value;
-
         if(!title || !text) return alert("Заполните заголовок и текст!");
 
         await addDoc(collection(db, "news"), {
@@ -69,7 +164,42 @@
         document.getElementById('image').value = '';
         document.getElementById('description').value = '';
         document.getElementById('text').value = '';
+        loadArticles();
+        switchTab('tab-articles'); // Перекидываем на список
     }
+
+    // Загрузка пользователей (только для админа)
+    async function loadUsers() {
+        if (userRole !== 'admin') return;
+        const list = document.getElementById('users-list');
+        const snapshot = await getDocs(collection(db, "users"));
+        
+        list.innerHTML = '';
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            const div = document.createElement('div');
+            div.className = 'user-item';
+            div.innerHTML = `
+                <div>
+                    <div class="article-title">${data.username}</div>
+                    <div class="small-text">Роль: ${data.role || 'journalist'}</div>
+                </div>
+                <button class="btn-danger" onclick="deleteUser('${docSnap.id}')" style="width: auto; margin: 0;">Удалить</button>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    window.deleteUser = async function(id) {
+        if (confirm("Удалить этого пользователя? Он больше не сможет зайти.")) {
+            await deleteDoc(doc(db, "users", id));
+            loadUsers();
+        }
+    }
+    
+    // Подгружаем юзеров, если это админ
+    setTimeout(() => { if(userRole === 'admin') loadUsers(); }, 1000);
+
   </script>
 </body>
 </html>
