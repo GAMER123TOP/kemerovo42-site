@@ -54,14 +54,14 @@
                             <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
                             <span class="author"><i class="far fa-user"></i> ${data.author || 'Редакция'}</span>
                         </div>
-                        <img src="${imgSrc}" class="article-image">
+                        <img src="${imgSrc}" class="article-image" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800'">
                         <div class="article-text">
-                            <p>${data.text.replace(/\n/g, '</p><p>')}</p>
+                            ${data.text} <!-- Выводим HTML из редактора -->
                         </div>
                         <a href="index.html" class="back-btn">← Назад</a>
                     `;
                 } else {
-                    articleBox.innerHTML = '<h1>Новость удалена или не существует</h1>';
+                    articleBox.innerHTML = '<h1>Новость удалена</h1>';
                 }
             }
             loadArticle();
