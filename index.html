@@ -34,7 +34,6 @@
 
     <div class="container">
         <main class="main-content">
-            <!-- Сюда грузятся новости -->
             <div id="news-container"><p style="text-align: center; padding: 20px;">Загрузка новостей...</p></div>
         </main>
 
@@ -43,7 +42,14 @@
                 <h3><i class="fas fa-bolt" style="color: #d4af37;"></i> Молния</h3>
                 <ul class="live-feed">
                     <li><span class="time">14:30</span> Спецназ завершил операцию в офисе. Задержаны 4 участника КОПГ.</li>
+                    <li><span class="time">14:10</span> На место прибыли сотрудники ФСБ и СК РФ. Здание оцеплено.</li>
                 </ul>
+            </div>
+
+            <div class="widget">
+                <h3><i class="fas fa-search"></i> Внимание, розыск!</h3>
+                <img src="https://images.unsplash.com/photo-1509248961158-e54f6934749c?auto=format&fit=crop&q=80&w=300&h=200" alt="Розыск" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                <p>Разыскиваются лица, причастные к деятельности КОПГ. Если вы обладаете информацией, сообщите в дежурную часть.</p>
             </div>
         </aside>
     </div>
@@ -52,21 +58,10 @@
         <p>&copy; 2026 Телепрограмма «Кемерово 42». Все права защищены.</p>
     </footer>
 
-    <!-- Подключаем Firebase -->
     <script type="module">
+        import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        // ВСТАВЬ СЮДА СВОЙ КОНФИГ ИЗ FIREBASE
-        const firebaseConfig = {
-            apiKey: "AIzaSyAtQiA2YnMurhbJ7_tlA6VgOGvTI6x3Cp8",
-            authDomain: "kemerovo-42-4ba67.firebaseapp.com",
-            projectId: "kemerovo-42-4ba67",
-            storageBucket: "kemerovo-42-4ba67.firebasestorage.app",
-            messagingSenderId: "664125425786",
-            appId: "1:664125425786:web:80e9d5de247952eaaf13c3",
-            measurementId: "G-HCE9BTKC5V"
-        };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -74,7 +69,6 @@
 
         async function loadNews() {
             try {
-                // Берем новости, сортируем по дате (сначала новые)
                 const q = query(collection(db, "news"), orderBy("date", "desc"));
                 const querySnapshot = await getDocs(q);
                 
@@ -89,10 +83,9 @@
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     const dateStr = new Date(data.date.seconds * 1000).toLocaleDateString('ru-RU');
-                    const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=500'; // Картинка по умолчанию
+                    const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=500';
                     
                     if (isFirst) {
-                        // Первая новость — большая
                         newsContainer.innerHTML = `
                             <a href="article.html?id=${doc.id}" class="hero-news" style="text-decoration: none; color: inherit;">
                                 <img src="${imgSrc}" alt="Фото">
@@ -106,7 +99,6 @@
                         `;
                         isFirst = false;
                     } else {
-                        // Остальные — карточки
                         gridHTML += `
                             <a href="article.html?id=${doc.id}" class="news-card" style="text-decoration: none; color: inherit;">
                                 <img src="${imgSrc}" alt="Фото">
@@ -128,7 +120,6 @@
                 newsContainer.innerHTML = `<p style="color:red; text-align:center;">Ошибка загрузки новостей.</p>`;
             }
         }
-
         loadNews();
     </script>
     <script src="script.js"></script>
