@@ -128,5 +128,16 @@
         loadNews();
     </script>
     <script src="script.js"></script>
+        <script>
+        // Проверяем, вошел ли пользователь
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        if (loggedInUser) {
+            // Если вошел, скрываем "Войти" и показываем "Панель" и "Профиль"
+            document.getElementById('login-btn').style.display = 'none';
+            document.getElementById('dash-btn').style.display = 'inline-flex';
+            document.getElementById('prof-btn').style.display = 'inline-flex';
+        }
+    </script>
+    <script src="script.js"></script>
 </body>
 </html>
