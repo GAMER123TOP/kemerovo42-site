@@ -14,7 +14,7 @@
 <body>
   <div class="box">
     <h2 style="text-align:center;">Вход в редакцию</h2>
-    <input type="text" id="username" placeholder="Логин">
+    <input type="text" id="login" placeholder="Логин (например, admin)">
     <input type="password" id="password" placeholder="Пароль">
     <button onclick="login()">Войти</button>
     <div id="error" class="error"></div>
@@ -23,41 +23,29 @@
   <script type="module">
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    async function hashPass(pass) {
-        const msgBuffer = new TextEncoder().encode(pass);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
+    const auth = getAuth(app);
 
     window.login = async function() {
-        const user = document.getElementById('username').value;
-        const pass = document.getElementById('password').value;
-        const errorDiv = document.getElementById('error');
+      const loginVal = document.getElementById('login').value.trim();
+      const pass = document.getElementById('password').value;
+      const errorDiv = document.getElementById('error');
 
-        if(!user || !pass) { errorDiv.innerText = "Заполните все поля"; return; }
+      if (!loginVal || !pass) { errorDiv.innerText = "Заполните все поля"; return; }
 
-        const hashedPass = await hashPass(pass);
-        const q = query(collection(db, "users"), where("username", "==", user));
-        const querySnapshot = await getDocs(q);
+      // Если ввели просто "admin", превращаем в "admin@kemerovo42.local"
+      const email = loginVal.includes('@') ? loginVal : `${loginVal}@kemerovo42.local`;
 
-        if (querySnapshot.empty) {
-            errorDiv.innerText = "Пользователь не найден";
-            return;
-        }
-
-        const userData = querySnapshot.docs[0].data();
-        if (userData.passwordHash === hashedPass) {
-            localStorage.setItem('loggedInUser', user);
-            window.location.href = 'dashboard.html';
-        } else {
-            errorDiv.innerText = "Неверный пароль";
-        }
-    }
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        window.location.href = 'dashboard.html';
+      } catch (e) {
+        console.error(e);
+        errorDiv.innerText = "Неверный логин или пароль";
+      }
+    };
   </script>
 </body>
 </html>
