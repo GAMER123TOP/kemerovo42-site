@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Профиль | Кемерово 42</title>
+  <style>
+    body { font-family: sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
+    .header { display: flex; justify-content: space-between; align-items: center; background: #0b1b3d; color: white; padding: 15px 30px; border-bottom: 4px solid #d4af37; }
+    .header a { color: #d4af37; text-decoration: none; font-weight: bold; }
+    .box { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    input, button { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+    button { background: #d4af37; border: none; font-weight: bold; cursor: pointer; }
+    .btn-danger { background: #e74c3c; color: white; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>Профиль</h2>
+    <a href="dashboard.html">← Назад в панель</a>
+  </div>
+
+  <div class="box">
+    <h3>Сменить пароль</h3>
+    <input type="password" id="old-pass" placeholder="Текущий пароль">
+    <input type="password" id="new-pass" placeholder="Новый пароль">
+    <button onclick="changePassword()">Сохранить</button>
+
+    <button class="btn-danger" onclick="deleteAccount()">Удалить аккаунт</button>
+  </div>
+
+  <script type="module">
+    import { firebaseConfig } from '../firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const currentUser = localStorage.getItem('loggedInUser');
+
+    if (!currentUser) window.location.href = 'login.html';
+
+    async function hashPass(pass) {
+        const msgBuffer = new TextEncoder().encode(pass);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    window.changePassword = async function() {
+        const oldP = document.getElementById('old-pass').value;
+        const newP = document.getElementById('new-pass').value;
+        if(!oldP || !newP) return alert("Заполните поля!");
+
+        const q = query(collection(db, "users"), where("username", "==", currentUser));
+        const snap = await getDocs(q);
+
+        if(snap.empty) return alert("Ошибка: пользователь не найден.");
+
+        const userDoc = snap.docs[0];
+        const userData = userDoc.data();
+        
+        // Проверяем старый пароль
+        if (userData.passwordHash !== await hashPass(oldP)) {
+            return alert("Старый пароль введен неверно!");
+        }
+
+        // Обновляем на новый
+        const newHash = await hashPass(newP);
+        await updateDoc(doc(db, "users", userDoc.id), {
+            passwordHash: newHash
+        });
+
+        alert("Пароль успешно изменен!");
+        document.getElementById('old-pass').value = '';
+        document.getElementById('new-pass').value = '';
+    }
+
+    window.deleteAccount = async function() {
+        if(!confirm("Вы уверены? Аккаунт будет удален навсегда.")) return;
+
+        const q = query(collection(db, "users"), where("username", "==", currentUser));
+        const snap = await getDocs(q);
+        
+        if(!snap.empty) {
+            await deleteDoc(doc(db, "users", snap.docs[0].id));
+            localStorage.removeItem('loggedInUser');
+            window.location.href = '../index.html'; // Выкидываем на главную
+        }
+    }
+  </script>
+</body>
+</html>
