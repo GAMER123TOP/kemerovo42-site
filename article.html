@@ -35,33 +35,55 @@
         const newsId = urlParams.get('id');
         const articleBox = document.getElementById('article-box');
 
+        // Функция для защиты от XSS (внедрения скриптов)
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         if (!newsId) {
             articleBox.innerHTML = '<h1>Ошибка: Статья не найдена</h1><a href="index.html" class="back-btn">На главную</a>';
         } else {
             async function loadArticle() {
-                const docRef = doc(db, "news", newsId);
-                const docSnap = await getDoc(docRef);
+                try {
+                    const docRef = doc(db, "news", newsId);
+                    const docSnap = await getDoc(docRef);
 
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    const dateStr = new Date(data.date.seconds * 1000).toLocaleDateString('ru-RU');
-                    const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980';
-                    
-                    articleBox.innerHTML = `
-                        <h1 class="article-title">${data.title}</h1>
-                        <div class="article-meta">
-                            <span class="tag">${data.tag || 'НОВОСТЬ'}</span>
-                            <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
-                            <span class="author"><i class="far fa-user"></i> ${data.author || 'Редакция'}</span>
-                        </div>
-                        <img src="${imgSrc}" class="article-image" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800'">
-                        <div class="article-text">
-                            ${data.text} <!-- Выводим HTML из редактора -->
-                        </div>
-                        <a href="index.html" class="back-btn">← Назад</a>
-                    `;
-                } else {
-                    articleBox.innerHTML = '<h1>Новость удалена</h1>';
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        
+                        // Безопасная проверка даты
+                        let dateStr = 'Дата не указана';
+                        if (data.date && data.date.seconds) {
+                            dateStr = new Date(data.date.seconds * 1000).toLocaleDateString('ru-RU');
+                        }
+
+                        const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980';
+                        
+                        articleBox.innerHTML = `
+                            <h1 class="article-title">${escapeHTML(data.title)}</h1>
+                            <div class="article-meta">
+                                <span class="tag">${escapeHTML(data.tag || 'НОВОСТЬ')}</span>
+                                <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
+                                <span class="author"><i class="far fa-user"></i> ${escapeHTML(data.author || 'Редакция')}</span>
+                            </div>
+                            <img src="${escapeHTML(imgSrc)}" class="article-image" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800'">
+                            <div class="article-text">
+                                ${data.text} <!-- Сам текст новости оставляем без экранирования, так как он создается в редакторе Quill -->
+                            </div>
+                            <a href="index.html" class="back-btn">← Назад</a>
+                        `;
+                    } else {
+                        articleBox.innerHTML = '<h1>Новость удалена или не существует</h1><a href="index.html" class="back-btn">На главную</a>';
+                    }
+                } catch (error) {
+                    console.error("Ошибка загрузки:", error);
+                    articleBox.innerHTML = '<h1>Ошибка загрузки статьи</h1><a href="index.html" class="back-btn">На главную</a>';
                 }
             }
             loadArticle();
