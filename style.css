@@ -32,8 +32,6 @@ header { background-color: var(--header-bg); color: white; border-bottom: 4px so
 .auth-buttons { display: flex; gap: 10px; }
 .btn-outline { background-color: transparent; color: white; border: 1px solid white; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: all 0.3s; font-family: inherit; font-size: 13.33px; }
 .btn-outline:hover { background-color: white; color: #0b1b3d; }
-.btn-solid { background-color: var(--accent); color: #0b1b3d; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: all 0.3s; font-family: inherit; }
-.btn-solid:hover { background-color: #ffd700; }
 #theme-toggle { background-color: transparent; color: white; border: 1px solid var(--accent); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
 #theme-toggle:hover { background-color: var(--accent); color: #0b1b3d; }
 
@@ -77,14 +75,6 @@ body.dark-theme .card-content p { color: #999; }
 
 /* Подвал */
 footer { background-color: var(--header-bg); color: #888; text-align: center; padding: 30px; margin-top: 50px; font-size: 0.9em; }
-
-/* Модалка */
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); }
-.modal-content { background-color: var(--card-bg); color: var(--text-color); margin: 10% auto; padding: 30px; border-radius: var(--border-radius); width: 90%; max-width: 400px; position: relative; }
-.close { position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; color: #888; }
-.close:hover { color: var(--accent); }
-#register-form label { display: block; margin-top: 15px; font-size: 0.9em; font-weight: bold; }
-#register-form input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; background-color: var(--bg-color); color: var(--text-color); }
 
 /* Статья */
 .article-container { max-width: 800px; margin: 40px auto; background-color: var(--card-bg); padding: 40px; border-radius: var(--border-radius); box-shadow: var(--shadow); }
