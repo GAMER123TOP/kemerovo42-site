@@ -5,59 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Редакция | Кемерово 42</title>
   <style>
+    /* ... (стили оставляем без изменений) ... */
     body { margin: 0; padding: 0; background-color: #0b1b3d; font-family: 'Segoe UI', Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; }
     .login-box { background: #1a2f5a; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 320px; border: 2px solid #d4af37; }
-    .tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid #d4af37; }
-    .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-weight: bold; color: #888; }
-    .tab.active { color: #d4af37; border-bottom: 3px solid #d4af37; }
     h1 { margin-top: 0; color: #d4af37; font-size: 22px; text-align: center; }
     input { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
     button { width: 100%; padding: 12px; background-color: #d4af37; color: #0b1b3d; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .form-container { display: none; }
-    .form-container.active { display: block; }
     .error { color: #e74c3c; font-size: 13px; text-align: center; margin-top: 10px; display: none; }
-    .success { color: #2ecc71; font-size: 13px; text-align: center; margin-top: 10px; display: none; }
   </style>
 </head>
 <body>
 
   <div class="login-box">
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab('login')">Вход</div>
-      <div class="tab" onclick="switchTab('register')">Регистрация</div>
-    </div>
-
-    <div id="login-screen" class="form-container active">
-      <h1>ВХОД</h1>
-      <input type="text" id="login-user" placeholder="Логин">
-      <input type="password" id="login-pass" placeholder="Пароль">
-      <button onclick="checkLogin()">Войти</button>
-      <div class="error" id="login-error">Неверный логин или пароль!</div>
-    </div>
-
-    <div id="register-screen" class="form-container">
-      <h1>РЕГИСТРАЦИЯ</h1>
-      <!-- netlify атрибут нужен для сбора заявок -->
-      <form name="registration" netlify>
-        <input type="text" name="username" placeholder="Придумайте логин" required>
-        <input type="password" name="password" placeholder="Придумайте пароль" required>
-        <button type="submit">Отправить заявку</button>
-      </form>
-      <div class="success" id="reg-success">Заявка отправлена! Ожидайте одобрения.</div>
-    </div>
+    <h1>ВХОД В РЕДАКЦИЮ</h1>
+    <input type="text" id="login-user" placeholder="Логин">
+    <input type="password" id="login-pass" placeholder="Пароль">
+    <button onclick="checkLogin()">Войти</button>
+    <div class="error" id="login-error">Неверный логин или пароль!</div>
   </div>
 
-  <script>
-    // ====== ХРАНИЛИЩЕ ХЭШЕЙ (ПАРОЛИ ЗАШИФРОВАНЫ) ======
-    // Чтобы добавить нового человека, сгенерируй хэш его пароля на emn178.github.io/online-tools/sha256.html
-    const USERS = {
-        // admin : 12345
-        'admin': '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5',
-        
-        // journalist : press42
-        'journalist': '3d4e4a93c58873cd735f4a5757949d327a6e3b0c5d5c3e7d7f8f9a0b1c2d3e4f' 
-    };
+  <!-- ПОДКЛЮЧАЕМ БАЗУ ДАННЫХ -->
+  <script src="database.js"></script>
 
+  <script>
+    // Функция для превращения текста в хэш
     async function hashPassword(password) {
         const msgBuffer = new TextEncoder().encode(password);
         const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -66,25 +37,16 @@
         return hashHex;
     }
 
-    function switchTab(tab) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.form-container').forEach(f => f.classList.remove('active'));
-        
-        if (tab === 'login') {
-            document.querySelector('.tab:nth-child(1)').classList.add('active');
-            document.getElementById('login-screen').classList.add('active');
-        } else {
-            document.querySelector('.tab:nth-child(2)').classList.add('active');
-            document.getElementById('register-screen').classList.add('active');
-        }
-    }
-
     async function checkLogin() {
         const user = document.getElementById('login-user').value;
         const pass = document.getElementById('login-pass').value;
+
+        // Хэшируем то, что ввел пользователь
+        const hashedUser = await hashPassword(user);
         const hashedPass = await hashPassword(pass);
 
-        if (USERS[user] && USERS[user] === hashedPass) {
+        // Проверяем: есть ли такой хэш логина в базе, и совпадает ли с ним хэш пароля
+        if (USERS_DB[hashedUser] && USERS_DB[hashedUser] === hashedPass) {
             document.querySelector('.login-box').style.display = 'none';
             loadCMS();
         } else {
