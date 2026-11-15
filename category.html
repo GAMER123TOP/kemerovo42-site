@@ -18,8 +18,7 @@
     <div class="container">
         <main class="main-content">
             <div class="page-header" style="margin-bottom: 30px;">
-                <!-- Если тег не передан, напишет "Рубрика" -->
-                <h1 id="category-title" style="font-family: 'Montserrat'; font-size: 2rem; color: var(--header-bg); border-left: 5px solid var(--accent); padding-left: 15px;">Рубрика</h1>
+                <h1 id="category-title" style="font-family: 'Montserrat'; font-size: 2rem; color: var(--header-bg); border-left: 5px solid var(--accent); padding-left: 15px;">Загрузка...</h1>
             </div>
             
             <div id="news-container"><p style="text-align: center; padding: 20px;">Загрузка новостей...</p></div>
@@ -49,27 +48,40 @@
         
         const newsContainer = document.getElementById('news-container');
         const urlParams = new URLSearchParams(window.location.search);
-        let categoryTag = urlParams.get('tag');
+        const categorySlug = urlParams.get('slug');
+        let categoryName = '';
 
-        // Загрузка категорий в верхнее меню
         async function loadNavCategories() {
             const nav = document.getElementById('main-nav');
             const snapshot = await getDocs(collection(db, "categories"));
             snapshot.forEach(doc => {
                 const cat = doc.data();
-                nav.innerHTML += `<a href="category.html?tag=${encodeURIComponent(cat.name)}" ${cat.name === categoryTag ? 'class="active"' : ''}>${cat.name}</a>`;
+                const urlParam = cat.slug ? `slug=${cat.slug}` : `slug=${encodeURIComponent(cat.name)}`;
+                nav.innerHTML += `<a href="category.html?${urlParam}" ${cat.slug === categorySlug ? 'class="active"' : ''}>${cat.name}</a>`;
             });
         }
         loadNavCategories();
 
-        // Если тега нет или он пустой — на главную
-        if (!categoryTag || categoryTag.trim() === '') {
-            window.location.href = 'index.html';
-        } else {
-            document.getElementById('category-title').innerText = categoryTag;
+        // Находим русское название категории по её slug
+        async function findCategoryName() {
+            const snapshot = await getDocs(collection(db, "categories"));
+            snapshot.forEach(doc => {
+                const cat = doc.data();
+                if (cat.slug === categorySlug || cat.name === categorySlug) {
+                    categoryName = cat.name;
+                }
+            });
+            
+            if (categoryName) {
+                document.getElementById('category-title').innerText = categoryName;
+                loadCategoryNews(); 
+            } else {
+                document.getElementById('category-title').innerText = 'Рубрика не найдена';
+                newsContainer.innerHTML = '<p style="text-align: center; padding: 20px;">Такой категории не существует.</p>';
+            }
         }
+        findCategoryName();
 
-        // Форматирование времени (Кемерово UTC+7)
         function formatDateTime(timestamp) {
             if (!timestamp || !timestamp.seconds) return 'Дата не указана';
             const utcDate = new Date(timestamp.seconds * 1000);
@@ -82,15 +94,14 @@
             return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
 
-        // Загрузка новостей по категории
         async function loadCategoryNews() {
             try {
-                const q = query(collection(db, "news"), where("tag", "==", categoryTag), orderBy("date", "desc"));
+                const q = query(collection(db, "news"), where("tag", "==", categoryName), orderBy("date", "desc"));
                 const snapshot = await getDocs(q);
                 
                 newsContainer.innerHTML = '';
                 if (snapshot.empty) {
-                    newsContainer.innerHTML = `<div style="text-align: center; padding: 60px 20px; background: var(--card-bg); border-radius: 16px; box-shadow: var(--shadow-sm);"><i class="fas fa-folder-open" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 15px;"></i><h3 style="color: var(--text-muted);">В рубрике «${categoryTag}» пока нет новостей</h3></div>`;
+                    newsContainer.innerHTML = `<div style="text-align: center; padding: 60px 20px; background: var(--card-bg); border-radius: 16px; box-shadow: var(--shadow-sm);"><i class="fas fa-folder-open" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 15px;"></i><h3 style="color: var(--text-muted);">В рубрике «${categoryName}» пока нет новостей</h3></div>`;
                     return;
                 }
 
@@ -117,11 +128,10 @@
                 });
             } catch (error) {
                 console.error("Ошибка:", error);
-                newsContainer.innerHTML = '<p style="text-align: center; color: red; padding: 20px;">Ошибка загрузки. Возможно, требуется создать индекс в Firebase (нажмите F12 для подробностей).</p>';
+                newsContainer.innerHTML = '<p style="text-align: center; color: red; padding: 20px;">Ошибка загрузки. Возможно, требуется создать индекс в Firebase.</p>';
             }
         }
 
-        // Топ-5
         async function loadPopular() {
             const list = document.getElementById('popular-list');
             try {
@@ -142,7 +152,6 @@
             } catch (e) { list.innerHTML = '<li style="color: #e74c3c;">Ошибка.</li>'; }
         }
 
-        loadCategoryNews();
         loadPopular();
     </script>
 </body>
