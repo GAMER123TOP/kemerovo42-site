@@ -15,7 +15,6 @@ export function renderHeader() {
       <header>
         <div class="header-container">
             <div class="logo">
-                <!-- Абсолютный путь к главной -->
                 <a href="/kemerovo42-site/index.html" style="text-decoration: none; color: white;">
                     <h1>КЕМЕРОВО <span>42</span></h1>
                 </a>
@@ -23,7 +22,6 @@ export function renderHeader() {
             </div>
             
             <div class="auth-buttons" id="auth-buttons" style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
-                <!-- Абсолютные пути к админке -->
                 <a href="/kemerovo42-site/admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; display: inline-flex;">Войти</a>
                 <a href="/kemerovo42-site/admin/index.html" id="dash-btn" class="btn-outline" style="text-decoration: none; display: none;">Панель управления</a>
                 <a href="/kemerovo42-site/admin/profile.html" id="prof-btn" class="btn-outline" style="text-decoration: none; display: none; align-items: center; gap: 8px; padding: 6px 16px;">
@@ -36,18 +34,13 @@ export function renderHeader() {
       </header>
     `;
 
-    // --- ЗАГРУЗКА МЕНЮ ---
     const nav = document.getElementById('main-nav');
     if (nav) {
         getDocs(collection(db, "categories")).then(snapshot => {
-            // Принудительно оставляем только "Главную" (очищаем от старых дублей)
             nav.innerHTML = '<a href="/kemerovo42-site/index.html">Главная</a>';
-            
             snapshot.forEach(doc => {
                 const cat = doc.data();
                 const urlParam = cat.slug ? `slug=${cat.slug}` : `slug=${encodeURIComponent(cat.name)}`;
-                
-                // Проверка на дубликат: если такая категория уже есть в меню, пропускаем
                 const existingLink = Array.from(nav.querySelectorAll('a')).find(a => a.innerText === cat.name);
                 if (!existingLink) {
                     nav.innerHTML += `<a href="/kemerovo42-site/category.html?${urlParam}">${cat.name}</a>`;
@@ -56,7 +49,6 @@ export function renderHeader() {
         }).catch(err => console.error("Ошибка загрузки меню:", err));
     }
 
-        // --- АВТОРИЗАЦИЯ И КНОПКИ ---
     onAuthStateChanged(auth, async (user) => {
         const loginBtn = document.getElementById('login-btn');
         const dashBtn = document.getElementById('dash-btn');
@@ -91,16 +83,13 @@ export function renderHeader() {
         }
     });
 
-    // --- ЛОГИКА ТЕМЫ ---
     const toggleBtn = document.getElementById('theme-toggle');
     const body = document.body;
     const currentTheme = localStorage.getItem('theme');
-    
     if (currentTheme === 'dark') {
         body.classList.add('dark-theme');
         if(toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-sun"></i> Светлая тема';
     }
-
     if(toggleBtn) {
         toggleBtn.addEventListener('click', () => {
             body.classList.toggle('dark-theme');
