@@ -18,14 +18,14 @@
         /* Стили для комментариев */
         .comments-section { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 30px; }
         .comments-section h3 { font-family: 'Montserrat'; margin-bottom: 20px; font-size: 1.3rem; }
-        .comment-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
+        .comment-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; margin-top: 20px; }
         .comment-form textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; resize: vertical; min-height: 80px; }
         .comment-form button { align-self: flex-start; padding: 10px 20px; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
         .comment-item { background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #e2e8f0; }
         .comment-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted); }
         .comment-author { font-weight: 700; color: var(--header-bg); }
-        .comment-text { font-size: 0.95rem; line-height: 1.5; }
-        .btn-del-comment { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; }
+        .comment-text { font-size: 0.95rem; line-height: 1.5; word-wrap: break-word; }
+        .btn-del-comment { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; margin-top: 10px; padding: 0; }
         .btn-del-comment:hover { text-decoration: underline; }
     </style>
 </head>
@@ -41,7 +41,7 @@
         import { renderHeader } from './header.js';
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, increment, arrayUnion, arrayRemove, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, increment, arrayUnion, arrayRemove, collection, addDoc, query, where, orderBy, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         renderHeader();
@@ -54,6 +54,7 @@
         let currentUser = null;
         let userRole = 'reader';
 
+        // Слушаем авторизацию (без вызова функции загрузки)
         onAuthStateChanged(auth, async (user) => { 
             currentUser = user; 
             if (user) {
@@ -61,7 +62,6 @@
                 if (token.claims.admin) userRole = 'admin';
                 else if (token.claims.moderator) userRole = 'moderator';
             }
-            if (newsId) loadArticle();
         });
 
         // Кнопка Наверх
@@ -84,125 +84,130 @@
             return `${kDate.toISOString().slice(0, 10).split('-').reverse().join('.')} ${kDate.toISOString().slice(11, 16)} (Кемерово)`;
         }
 
-        if (!newsId) {
-            articleBox.innerHTML = '<h1>Статья не найдена</h1><a href="index.html" class="back-btn">На главную</a>';
-        } else {
-            async function loadArticle() {
-                try {
-                    const docRef = doc(db, "news", newsId);
-                    const docSnap = await getDoc(docRef);
+        // Основная функция загрузки
+        async function loadArticle() {
+            if (!newsId) {
+                articleBox.innerHTML = '<h1>Статья не найдена</h1><a href="index.html" class="back-btn">На главную</a>';
+                return;
+            }
+
+            try {
+                const docRef = doc(db, "news", newsId);
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
                     
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        
-                        // Накрутка просмотров
-                        const viewedKey = `viewed_${newsId}`;
-                        if (!localStorage.getItem(viewedKey)) {
-                            updateDoc(docRef, { views: increment(1) }).catch(() => {});
-                            localStorage.setItem(viewedKey, 'true');
-                        }
-
-                        let dateStr = formatDateTime(data.date);
-                        const imgSrc = data.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800';
-                        
-                        const likesArray = data.likes || [];
-                        const isLiked = currentUser && likesArray.includes(currentUser.uid);
-                        const heartIcon = isLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
-
-                        // Проверка на закладку
-                        let isSaved = false;
-                        if (currentUser) {
-                            const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-                            if (userSnap.exists() && userSnap.data().bookmarks && userSnap.data().bookmarks.includes(newsId)) {
-                                isSaved = true;
-                            }
-                        }
-                        const saveIcon = isSaved ? '<i class="fas fa-bookmark" style="color: var(--accent);"></i>' : '<i class="far fa-bookmark"></i>';
-
-                        const authorName = escapeHTML(data.author || 'Редакция');
-                        const authorLink = `<a href="index.html?author=${encodeURIComponent(authorName)}" class="author-link">${authorName}</a>`;
-
-                        articleBox.innerHTML = `
-                            <h1 class="article-title">${escapeHTML(data.title)}</h1>
-                            <div class="article-meta">
-                                <span class="tag">${escapeHTML(data.tag || 'НОВОСТЬ')}</span>
-                                <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
-                                <span class="author"><i class="far fa-user"></i> ${authorLink}</span>
-                            </div>
-                            <img src="${escapeHTML(imgSrc)}" class="article-image" onerror="this.style.display='none'">
-                            
-                            <div class="article-text">${DOMPurify.sanitize(data.text)}</div>
-                            
-                            <div>
-                                <button id="like-btn" class="like-btn">
-                                    <span id="heart-icon">${heartIcon}</span> Нравится (<span id="like-count">${likesArray.length}</span>)
-                                </button>
-                                <button id="save-btn" class="save-btn">
-                                    <span id="save-icon">${saveIcon}</span> В закладки
-                                </button>
-                            </div>
-
-                            <!-- Блок комментариев -->
-                            <div class="comments-section">
-                                <h3>Комментарии</h3>
-                                <div id="comments-list">Загрузка...</div>
-                                ${currentUser ? `
-                                    <div class="comment-form">
-                                        <textarea id="comment-text" placeholder="Написать комментарий..."></textarea>
-                                        <button onclick="addComment()">Отправить</button>
-                                    </div>
-                                ` : `<p style="color: var(--text-muted); font-size: 0.9rem;">Войдите в аккаунт, чтобы оставить комментарий.</p>`}
-                            </div>
-
-                            <a href="index.html" class="back-btn">← Назад</a>
-                        `;
-
-                        // Лайк
-                        document.getElementById('like-btn').onclick = async () => {
-                            if (!currentUser) return alert('Войдите в аккаунт!');
-                            const heartSpan = document.getElementById('heart-icon');
-                            const countSpan = document.getElementById('like-count');
-                            heartSpan.classList.add('like-animate');
-                            setTimeout(() => heartSpan.classList.remove('like-animate'), 800);
-
-                            if (likesArray.includes(currentUser.uid)) {
-                                await updateDoc(docRef, { likes: arrayRemove(currentUser.uid) });
-                                countSpan.innerText = parseInt(countSpan.innerText) - 1;
-                                heartSpan.innerHTML = '<i class="far fa-heart"></i>';
-                            } else {
-                                await updateDoc(docRef, { likes: arrayUnion(currentUser.uid) });
-                                countSpan.innerText = parseInt(countSpan.innerText) + 1;
-                                heartSpan.innerHTML = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
-                            }
-                        };
-
-                        // Закладка
-                        document.getElementById('save-btn').onclick = async () => {
-                            if (!currentUser) return alert('Войдите в аккаунт!');
-                            const userRef = doc(db, "users", currentUser.uid);
-                            const saveIconSpan = document.getElementById('save-icon');
-                            
-                            if (isSaved) {
-                                await updateDoc(userRef, { bookmarks: arrayRemove(newsId) });
-                                saveIconSpan.innerHTML = '<i class="far fa-bookmark"></i>';
-                                isSaved = false;
-                            } else {
-                                await updateDoc(userRef, { bookmarks: arrayUnion(newsId) });
-                                saveIconSpan.innerHTML = '<i class="fas fa-bookmark" style="color: var(--accent);"></i>';
-                                isSaved = true;
-                            }
-                        };
-
-                        loadComments();
-
-                    } else {
-                        articleBox.innerHTML = '<h1>Новость удалена</h1><a href="index.html" class="back-btn">На главную</a>';
+                    // Накрутка просмотров
+                    const viewedKey = `viewed_${newsId}`;
+                    if (!localStorage.getItem(viewedKey)) {
+                        updateDoc(docRef, { views: increment(1) }).catch(() => {});
+                        localStorage.setItem(viewedKey, 'true');
                     }
-                } catch (error) { articleBox.innerHTML = '<h1>Ошибка загрузки</h1>'; }
+
+                    let dateStr = formatDateTime(data.date);
+                    const imgSrc = data.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800';
+                    
+                    const likesArray = data.likes || [];
+                    const isLiked = currentUser && likesArray.includes(currentUser.uid);
+                    const heartIcon = isLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
+
+                    // Проверка на закладку
+                    let isSaved = false;
+                    if (currentUser) {
+                        const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+                        if (userSnap.exists() && userSnap.data().bookmarks && userSnap.data().bookmarks.includes(newsId)) {
+                            isSaved = true;
+                        }
+                    }
+                    const saveIcon = isSaved ? '<i class="fas fa-bookmark" style="color: var(--accent);"></i>' : '<i class="far fa-bookmark"></i>';
+
+                    const authorName = escapeHTML(data.author || 'Редакция');
+                    const authorLink = `<a href="index.html?author=${encodeURIComponent(authorName)}" class="author-link">${authorName}</a>`;
+
+                    articleBox.innerHTML = `
+                        <h1 class="article-title">${escapeHTML(data.title)}</h1>
+                        <div class="article-meta">
+                            <span class="tag">${escapeHTML(data.tag || 'НОВОСТЬ')}</span>
+                            <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
+                            <span class="author"><i class="far fa-user"></i> ${authorLink}</span>
+                        </div>
+                        <img src="${escapeHTML(imgSrc)}" class="article-image" onerror="this.style.display='none'">
+                        
+                        <div class="article-text">${DOMPurify.sanitize(data.text)}</div>
+                        
+                        <div>
+                            <button id="like-btn" class="like-btn">
+                                <span id="heart-icon">${heartIcon}</span> Нравится (<span id="like-count">${likesArray.length}</span>)
+                            </button>
+                            <button id="save-btn" class="save-btn">
+                                <span id="save-icon">${saveIcon}</span> В закладки
+                            </button>
+                        </div>
+
+                        <!-- Блок комментариев -->
+                        <div class="comments-section">
+                            <h3>Комментарии</h3>
+                            <div id="comments-list">Загрузка...</div>
+                            ${currentUser ? `
+                                <div class="comment-form">
+                                    <textarea id="comment-text" placeholder="Написать комментарий..."></textarea>
+                                    <button onclick="addComment()">Отправить</button>
+                                </div>
+                            ` : `<p style="color: var(--text-muted); font-size: 0.9rem;">Войдите в аккаунт, чтобы оставить комментарий.</p>`}
+                        </div>
+
+                        <a href="index.html" class="back-btn">← Назад</a>
+                    `;
+
+                    // Лайк
+                    document.getElementById('like-btn').onclick = async () => {
+                        if (!currentUser) return alert('Войдите в аккаунт!');
+                        const heartSpan = document.getElementById('heart-icon');
+                        const countSpan = document.getElementById('like-count');
+                        heartSpan.classList.add('like-animate');
+                        setTimeout(() => heartSpan.classList.remove('like-animate'), 800);
+
+                        if (likesArray.includes(currentUser.uid)) {
+                            await updateDoc(docRef, { likes: arrayRemove(currentUser.uid) });
+                            countSpan.innerText = parseInt(countSpan.innerText) - 1;
+                            heartSpan.innerHTML = '<i class="far fa-heart"></i>';
+                        } else {
+                            await updateDoc(docRef, { likes: arrayUnion(currentUser.uid) });
+                            countSpan.innerText = parseInt(countSpan.innerText) + 1;
+                            heartSpan.innerHTML = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
+                        }
+                    };
+
+                    // Закладка
+                    document.getElementById('save-btn').onclick = async () => {
+                        if (!currentUser) return alert('Войдите в аккаунт!');
+                        const userRef = doc(db, "users", currentUser.uid);
+                        const saveIconSpan = document.getElementById('save-icon');
+                        
+                        if (isSaved) {
+                            await updateDoc(userRef, { bookmarks: arrayRemove(newsId) });
+                            saveIconSpan.innerHTML = '<i class="far fa-bookmark"></i>';
+                            isSaved = false;
+                        } else {
+                            await updateDoc(userRef, { bookmarks: arrayUnion(newsId) });
+                            saveIconSpan.innerHTML = '<i class="fas fa-bookmark" style="color: var(--accent);"></i>';
+                            isSaved = true;
+                        }
+                    };
+
+                    loadComments();
+
+                } else {
+                    articleBox.innerHTML = '<h1>Новость удалена</h1><a href="index.html" class="back-btn">На главную</a>';
+                }
+            } catch (error) { 
+                console.error(error);
+                articleBox.innerHTML = '<h1>Ошибка загрузки</h1>'; 
             }
         }
 
-        // Загрузка и отправка комментариев
+        // Загрузка комментариев
         function loadComments() {
             const list = document.getElementById('comments-list');
             const q = query(collection(db, "comments"), where("newsId", "==", newsId), orderBy("date", "desc"));
@@ -214,7 +219,6 @@
                     const d = docSnap.data();
                     let dateStr = d.date && d.date.seconds ? new Date(d.date.seconds * 1000).toLocaleString('ru-RU') : '—';
                     
-                    // Кнопка удаления для модератора/админа
                     const delBtn = (userRole === 'admin' || userRole === 'moderator') 
                         ? `<button onclick="deleteComment('${docSnap.id}')" class="btn-del-comment"><i class="fas fa-trash"></i> Удалить</button>` 
                         : '';
@@ -255,6 +259,9 @@
                 await deleteDoc(doc(db, "comments", id));
             }
         };
+
+        // ЗАПУСКАЕМ ЗАГРУЗКУ ТОЛЬКО ТЕПЕРЬ, КОГДА ВСЕ ФУНКЦИИ ОБЪЯВЛЕНЫ
+        loadArticle();
     </script>
 </body>
 </html>
