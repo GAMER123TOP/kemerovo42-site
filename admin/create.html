@@ -16,6 +16,12 @@
     .gallery-row { display: flex; gap: 10px; margin-bottom: 10px; }
     .gallery-row input { flex-grow: 1; }
     .btn-remove-photo { background: #ef4444; color: white; border: none; border-radius: 6px; padding: 0 15px; cursor: pointer; }
+
+    /* Стили для чекбоксов рубрик */
+    .tags-container { display: flex; flex-wrap: wrap; gap: 10px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+    .tag-checkbox { display: flex; align-items: center; gap: 8px; background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+    .tag-checkbox:hover { border-color: var(--accent); }
+    .tag-checkbox input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
   </style>
 </head>
 <body>
@@ -32,13 +38,15 @@
         <input type="text" id="title" class="form-control" placeholder="Введите заголовок...">
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-        <div class="form-group">
-          <label>Рубрика</label>
-          <select id="tag" class="form-control">
-            <option value="Новость">Обычная новость</option>
-          </select>
+      <div class="form-group">
+        <label>Рубрики (можно выбрать несколько)</label>
+        <div class="tags-container" id="tags-container">
+            <!-- Сюда скрипт добавит чекбоксы -->
+            <span style="color: var(--text-muted); font-size: 0.9rem;">Загрузка...</span>
         </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
         <div class="form-group">
           <label>Главная обложка (URL)</label>
           <input type="text" id="image" class="form-control" placeholder="Ссылка на Imgur">
@@ -88,7 +96,6 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    // Простой редактор без кастомных кнопок картинок (только текст)
     const quill = new Quill('#editor-container', {
       theme: 'snow', 
       placeholder: 'Начните писать текст...',
@@ -113,20 +120,31 @@
       if (userSnap.exists()) currentUserDisplayName = userSnap.data().displayName || user.email.split('@')[0];
     });
 
-    async function loadCategoriesToSelect() {
-        const tagSelect = document.getElementById('tag');
+    // Загрузка существующих категорий в виде чекбоксов
+    async function loadCategoriesToSelect(selectedTags = []) {
+        const container = document.getElementById('tags-container');
+        container.innerHTML = '';
+        
         const snapshot = await getDocs(collection(db, "categories"));
+        if (snapshot.empty) {
+            container.innerHTML = '<span style="color: var(--text-muted);">Нет категорий. Создайте их в разделе "Категории".</span>';
+            return;
+        }
+
         snapshot.forEach(doc => {
             const cat = doc.data();
-            const option = document.createElement('option');
-            option.value = cat.name;
-            option.textContent = cat.name;
-            tagSelect.appendChild(option);
+            const isChecked = selectedTags.includes(cat.name) ? 'checked' : '';
+            
+            const label = document.createElement('label');
+            label.className = 'tag-checkbox';
+            label.innerHTML = `
+                <input type="checkbox" value="${cat.name}" ${isChecked}>
+                <span>${cat.name}</span>
+            `;
+            container.appendChild(label);
         });
     }
-    loadCategoriesToSelect();
 
-    // --- УПРАВЛЕНИЕ ПОЛЯМИ ГАЛЕРЕИ ---
     function addGalleryField(url = '') {
         const container = document.getElementById('gallery-container');
         const row = document.createElement('div');
@@ -137,12 +155,12 @@
         `;
         container.appendChild(row);
     }
-
-    // Делаем функцию глобальной, чтобы работала кнопка в HTML
     window.addGalleryField = addGalleryField;
 
-    // При загрузке страницы добавляем одно пустое поле (если это новая новость)
-    if (!editId) addGalleryField();
+    if (!editId) {
+        addGalleryField();
+        loadCategoriesToSelect();
+    }
 
     // Загрузка данных для редактирования
     if (editId) {
@@ -156,18 +174,17 @@
                 document.getElementById('image').value = data.image || '';
                 document.getElementById('description').value = data.description || '';
                 
-                setTimeout(() => {
-                    const tagSelect = document.getElementById('tag');
-                    if (data.tag) tagSelect.value = data.tag;
-                }, 500);
+                // Если у новости был старый формат (одна строка tag), превращаем её в массив
+                let savedTags = data.tags || (data.tag ? [data.tag] : []);
+                
+                loadCategoriesToSelect(savedTags);
 
                 if (data.text) quill.clipboard.dangerouslyPasteHTML(data.text);
 
-                // Загружаем сохраненные картинки в поля
                 if (data.gallery && data.gallery.length > 0) {
                     data.gallery.forEach(url => addGalleryField(url));
                 } else {
-                    addGalleryField(); // пустое поле
+                    addGalleryField();
                 }
             } else {
                 alert("Новость не найдена");
@@ -182,19 +199,23 @@
       
       if(!title || quill.getText().trim() === '') return alert("Заполните заголовок и текст!");
 
-      // Собираем все ссылки из полей галереи
+      // Собираем выбранные чекбоксы
+      const checkedTags = Array.from(document.querySelectorAll('#tags-container input:checked')).map(cb => cb.value);
+      if (checkedTags.length === 0) return alert("Выберите хотя бы одну рубрику!");
+
       const galleryInputs = document.querySelectorAll('.gallery-input');
       const galleryArray = Array.from(galleryInputs).map(input => input.value.trim()).filter(url => url !== '');
 
       const newsData = {
         title: title, 
-        tag: document.getElementById('tag').value,
+        tags: checkedTags, // Сохраняем массив рубрик
+        tag: checkedTags[0], // Оставляем первую для совместимости со старыми скриптами
         image: document.getElementById('image').value || '',
         description: document.getElementById('description').value || '',
         text: text, 
         author: currentUserDisplayName,
         status: status,
-        gallery: galleryArray // Сохраняем массив картинок
+        gallery: galleryArray
       };
 
       try {
