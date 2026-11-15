@@ -27,6 +27,29 @@
         .comment-text { font-size: 0.95rem; line-height: 1.5; word-wrap: break-word; }
         .btn-del-comment { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; margin-top: 10px; padding: 0; }
         .btn-del-comment:hover { text-decoration: underline; }
+
+        /* СЕТКА ДЛЯ КАРТИНОК В ТЕКСТЕ */
+        .article-text img { 
+            max-width: 100%; 
+            border-radius: 8px; 
+            display: inline-block; 
+            margin: 5px; 
+            width: calc(33.33% - 10px); /* 3 картинки в ряд */
+            vertical-align: top; 
+            object-fit: cover; 
+            height: 200px; /* Одинаковая высота */
+            cursor: pointer; 
+            transition: transform 0.2s; 
+        }
+        .article-text img:hover { transform: scale(1.02); }
+        
+        /* Если картинка одна, она растягивается */
+        .article-text img:only-child {
+            width: 100%;
+            height: auto;
+            max-height: 500px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -54,7 +77,6 @@
         let currentUser = null;
         let userRole = 'reader';
 
-        // Слушаем авторизацию
         onAuthStateChanged(auth, async (user) => { 
             currentUser = user; 
             if (user) {
@@ -64,7 +86,6 @@
             }
         });
 
-        // Кнопка Наверх
         const scrollBtn = document.getElementById('scroll-top-btn');
         window.addEventListener('scroll', () => {
             if (window.scrollY > 300) scrollBtn.classList.add('show');
@@ -84,7 +105,6 @@
             return `${kDate.toISOString().slice(0, 10).split('-').reverse().join('.')} ${kDate.toISOString().slice(11, 16)} (Кемерово)`;
         }
 
-        // Основная функция загрузки
         async function loadArticle() {
             if (!newsId) {
                 articleBox.innerHTML = '<h1>Статья не найдена</h1><a href="index.html" class="back-btn">На главную</a>';
@@ -98,7 +118,6 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     
-                    // Накрутка просмотров
                     const viewedKey = `viewed_${newsId}`;
                     if (!localStorage.getItem(viewedKey)) {
                         updateDoc(docRef, { views: increment(1) }).catch(() => {});
@@ -108,14 +127,11 @@
                     let dateStr = formatDateTime(data.date);
                     const imgSrc = data.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800';
                     
-                    // --- ЛАЙКИ ---
                     let likesArray = data.likes || [];
-                    // Если счетчик в базе ушел в минус из-за старого бага, сбрасываем его
                     if (likesArray.length < 0) likesArray = []; 
                     const isLiked = currentUser && likesArray.includes(currentUser.uid);
                     const heartIcon = isLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
 
-                    // Проверка на закладку
                     let isSaved = false;
                     if (currentUser) {
                         const userSnap = await getDoc(doc(db, "users", currentUser.uid));
@@ -148,7 +164,6 @@
                             </button>
                         </div>
 
-                        <!-- Блок комментариев -->
                         <div class="comments-section">
                             <h3>Комментарии</h3>
                             <div id="comments-list">Загрузка...</div>
@@ -163,34 +178,27 @@
                         <a href="index.html" class="back-btn">← Назад</a>
                     `;
 
-                    // --- ЛАЙК (ПОЛНОСТЬЮ ПЕРЕПИСАН) ---
                     const likeBtn = document.getElementById('like-btn');
                     likeBtn.onclick = async () => {
                         if (!currentUser) return alert('Войдите в аккаунт!');
-                        
-                        // Блокируем кнопку, чтобы не было спама
                         likeBtn.disabled = true;
                         likeBtn.style.opacity = '0.7';
 
                         const heartSpan = document.getElementById('heart-icon');
                         const countSpan = document.getElementById('like-count');
                         
-                        // Анимация
                         heartSpan.classList.add('like-animate');
                         setTimeout(() => heartSpan.classList.remove('like-animate'), 800);
 
                         try {
-                            // Проверяем актуальный список лайков прямо сейчас
                             const freshSnap = await getDoc(docRef);
                             const freshLikes = freshSnap.data().likes || [];
 
                             if (freshLikes.includes(currentUser.uid)) {
-                                // Если лайк уже есть — снимаем
                                 await updateDoc(docRef, { likes: arrayRemove(currentUser.uid) });
                                 heartSpan.innerHTML = '<i class="far fa-heart"></i>';
                                 countSpan.innerText = Math.max(0, freshLikes.length - 1);
                             } else {
-                                // Если лайка нет — ставим
                                 await updateDoc(docRef, { likes: arrayUnion(currentUser.uid) });
                                 heartSpan.innerHTML = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
                                 countSpan.innerText = freshLikes.length + 1;
@@ -198,13 +206,11 @@
                         } catch (error) {
                             console.error("Ошибка лайка:", error);
                         } finally {
-                            // Разблокируем кнопку
                             likeBtn.disabled = false;
                             likeBtn.style.opacity = '1';
                         }
                     };
 
-                    // --- ЗАКЛАДКА ---
                     document.getElementById('save-btn').onclick = async () => {
                         if (!currentUser) return alert('Войдите в аккаунт!');
                         const userRef = doc(db, "users", currentUser.uid);
@@ -232,7 +238,6 @@
             }
         }
 
-        // Загрузка комментариев
         function loadComments() {
             const list = document.getElementById('comments-list');
             const q = query(collection(db, "comments"), where("newsId", "==", newsId), orderBy("date", "desc"));
@@ -285,7 +290,6 @@
             }
         };
 
-        // ЗАПУСКАЕМ ЗАГРУЗКУ
         loadArticle();
     </script>
 </body>
