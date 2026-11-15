@@ -10,7 +10,7 @@
         /* Защита от длинных заголовков */
         .hero-text h2, .card-content h3 {
             display: -webkit-box;
-            -webkit-line-clamp: 3; /* Максимум 3 строки */
+            -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
@@ -30,7 +30,6 @@
                 <a href="./admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Войти</a>
                 <a href="./admin/dashboard.html" id="dash-btn" class="btn-outline" style="text-decoration: none; display: none; margin-right: 10px;">Панель управления</a>
                 
-                <!-- Кнопка профиля с аватаркой -->
                 <a href="./admin/profile.html" id="prof-btn" class="btn-outline" style="text-decoration: none; display: none; align-items: center; gap: 8px; padding-left: 6px;">
                     <img id="header-avatar" src="" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; display: none; background: #ccc;">
                     <span id="header-username">Профиль</span>
@@ -56,33 +55,12 @@
         </main>
 
         <aside class="sidebar">
-            <!-- Виджет времени и погоды -->
+            <!-- Виджет Популярное -->
             <div class="widget">
-                <h3><i class="fas fa-cloud-sun" style="color: var(--accent);"></i> Кемерово</h3>
-                
-                <!-- Время -->
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div id="kemerovo-time" style="font-family: 'Montserrat', sans-serif; font-size: 2.5rem; font-weight: 800; color: var(--header-bg); line-height: 1.2;">--:--:--</div>
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;" id="kemerovo-date">Загрузка даты...</div>
-                </div>
-
-                <!-- Погода -->
-                <div style="background: var(--bg-color); border-radius: 12px; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <i class="fas fa-cloud" style="font-size: 2rem; color: #64748b;"></i>
-                        <div>
-                            <div style="font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 1.4rem; line-height: 1.2;">-2°C</div>
-                            <div style="font-size: 0.8rem; color: var(--text-muted);">Пасмурно</div>
-                        </div>
-                    </div>
-                    <div style="text-align: right; font-size: 0.8rem; color: var(--text-muted);">
-                        <div>Ветер: 2 м/с</div>
-                        <div>Влажн.: 74%</div>
-                    </div>
-                </div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 10px;">
-                    Прогноз на 15 ноября
-                </div>
+                <h3><i class="fas fa-fire" style="color: #e74c3c;"></i> Читают сейчас</h3>
+                <ul id="popular-list" style="list-style: none; display: flex; flex-direction: column; gap: 15px;">
+                    <li style="color: var(--text-muted); font-size: 0.9rem;">Загрузка...</li>
+                </ul>
             </div>
         </aside>
     </div>
@@ -232,28 +210,50 @@
             }
         }
 
-        window.loadMore = function() { loadNews(); };
-        loadNews();
+        // --- Загрузка популярных новостей (Топ 5) ---
+        async function loadPopular() {
+            const list = document.getElementById('popular-list');
+            try {
+                const q = query(
+                    collection(db, "news"), 
+                    orderBy("views", "desc"), 
+                    limit(5)
+                );
+                const snapshot = await getDocs(q);
+                
+                list.innerHTML = '';
+                
+                if (snapshot.empty) {
+                    list.innerHTML = '<li style="color: var(--text-muted); font-size: 0.9rem;">Пока нет статистики</li>';
+                    return;
+                }
 
-        // --- Часы Кемерово (UTC+7) ---
-        function updateKemerovoTime() {
-            const now = new Date();
-            // Переводим в часовой пояс Кемерово (UTC+7)
-            const kemerovoTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000));
-            
-            const hours = String(kemerovoTime.getHours()).padStart(2, '0');
-            const minutes = String(kemerovoTime.getMinutes()).padStart(2, '0');
-            const seconds = String(kemerovoTime.getSeconds()).padStart(2, '0');
-            const timeEl = document.getElementById('kemerovo-time');
-            if (timeEl) timeEl.textContent = `${hours}:${minutes}:${seconds}`;
-
-            const options = { weekday: 'long', day: 'numeric', month: 'long' };
-            const dateEl = document.getElementById('kemerovo-date');
-            if (dateEl) dateEl.textContent = kemerovoTime.toLocaleDateString('ru-RU', options);
+                let index = 1;
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const views = data.views || 0;
+                    
+                    list.innerHTML += `
+                        <li style="display: flex; gap: 12px; align-items: flex-start;">
+                            <span style="font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.2rem; color: var(--accent); line-height: 1;">${index}</span>
+                            <a href="article.html?id=${doc.id}" style="text-decoration: none; color: var(--text-color); font-size: 0.9rem; font-weight: 500; line-height: 1.4; transition: 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-color)'">
+                                ${escapeHTML(data.title)}
+                            </a>
+                        </li>
+                    `;
+                    index++;
+                });
+            } catch (e) {
+                console.error("Ошибка загрузки топа:", e);
+                list.innerHTML = '<li style="color: #e74c3c; font-size: 0.8rem;">Требуется создать индекс в Firebase (F12 для подробностей).</li>';
+            }
         }
 
-        updateKemerovoTime();
-        setInterval(updateKemerovoTime, 1000);
+        window.loadMore = function() { loadNews(); };
+        
+        // Запускаем всё при загрузке
+        loadNews();
+        loadPopular();
     </script>
     <script src="script.js"></script>
 </body>
