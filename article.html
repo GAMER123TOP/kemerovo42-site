@@ -8,19 +8,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <style>
-        /* Стили для лайков */
         .like-btn { margin-top: 30px; padding: 10px 20px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
         .like-btn:hover { background: #e2e8f0; }
-        
-        /* ЖЕЛЕЗОБЕТОННЫЙ ПЕРЕНОС СТРОК И АБЗАЦЕВ */
-        .article-text { 
-            font-size: 1.1rem; 
-            line-height: 1.8; 
-            color: var(--text-color); 
-            word-wrap: break-word; /* Переносит длинные слова */
-            white-space: normal;   /* Стандартное поведение текста */
-        }
-        .article-text p { margin-bottom: 20px; } /* Отступы между абзацами */
+        .article-text { font-size: 1.1rem; line-height: 1.8; color: var(--text-color); word-wrap: break-word; white-space: normal; }
+        .article-text p { margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -66,10 +57,19 @@
                 try {
                     const docRef = doc(db, "news", newsId);
                     const docSnap = await getDoc(docRef);
+                    
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        updateDoc(docRef, { views: increment(1) }).catch(() => {});
                         
+                        // --- ЗАЩИТА ОТ НАКРУТКИ ПРОСМОТРОВ ---
+                        const viewedKey = `viewed_${newsId}`;
+                        if (!localStorage.getItem(viewedKey)) {
+                            // Если пользователь еще не смотрел, добавляем +1 и ставим метку
+                            updateDoc(docRef, { views: increment(1) }).catch(() => {});
+                            localStorage.setItem(viewedKey, 'true');
+                        }
+                        // -------------------------------------
+
                         let dateStr = formatDateTime(data.date);
                         const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980';
                         
@@ -86,7 +86,6 @@
                             </div>
                             <img src="${escapeHTML(imgSrc)}" class="article-image" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167'">
                             
-                            <!-- Текст новости -->
                             <div class="article-text">${DOMPurify.sanitize(data.text)}</div>
                             
                             <button id="like-btn" class="like-btn">
