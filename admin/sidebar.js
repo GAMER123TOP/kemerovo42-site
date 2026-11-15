@@ -39,6 +39,7 @@ export function renderSidebar(activePage) {
           
           <li id="menu-users-li" style="display: none;"><a href="users.html" class="${activePage === 'users' ? 'active' : ''}"><i class="fas fa-users"></i> Пользователи</a></li>
           <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
+          <li><a href="guide.html" class="${activePage === 'guide' ? 'active' : ''}"><i class="fas fa-book"></i> Памятка для СМИ</a></li>
         </ul>
         <div class="sidebar-user" style="flex-direction: column; align-items: stretch;">
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
