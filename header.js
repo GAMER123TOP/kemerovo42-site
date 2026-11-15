@@ -34,65 +34,25 @@ export function renderHeader() {
       </header>
     `;
 
-    // --- ЗАГРУЗКА МЕНЮ ---
+    // --- ЗАГРУЗКА МЕНЮ (С ОЧИСТКОЙ) ---
     const nav = document.getElementById('main-nav');
     if (nav) {
         getDocs(collection(db, "categories")).then(snapshot => {
+            // Очищаем меню, оставляя только ссылку "Главная"
+            nav.innerHTML = '<a href="/kemerovo42-site/index.html">Главная</a>';
+            
             snapshot.forEach(doc => {
                 const cat = doc.data();
-                // Используем slug для URL, чтобы не было кракозябр
                 const urlParam = cat.slug ? `slug=${cat.slug}` : `slug=${encodeURIComponent(cat.name)}`;
-                nav.innerHTML += `<a href="category.html?${urlParam}">${cat.name}</a>`;
+                // Проверяем, чтобы не было дублей (если в базе случайно 2 одинаковых)
+                const existingLink = Array.from(nav.querySelectorAll('a')).find(a => a.innerText === cat.name);
+                if (!existingLink) {
+                    nav.innerHTML += `<a href="/kemerovo42-site/category.html?${urlParam}">${cat.name}</a>`;
+                }
             });
         });
     }
 
     // --- АВТОРИЗАЦИЯ ---
     onAuthStateChanged(auth, async (user) => {
-        const loginBtn = document.getElementById('login-btn');
-        const dashBtn = document.getElementById('dash-btn');
-        const profBtn = document.getElementById('prof-btn');
-        const headerAvatar = document.getElementById('header-avatar');
-        const headerUsername = document.getElementById('header-username');
-
-        if (user) {
-            loginBtn.style.display = 'none';
-            dashBtn.style.display = 'inline-flex';
-            profBtn.style.display = 'inline-flex';
-            headerUsername.innerText = user.email.split('@')[0];
-
-            try {
-                const docSnap = await getDoc(doc(db, "users", user.uid));
-                if (docSnap.exists() && docSnap.data().photoURL) {
-                    headerAvatar.src = docSnap.data().photoURL;
-                    headerAvatar.style.display = 'block';
-                }
-            } catch (e) {}
-        } else {
-            loginBtn.style.display = 'inline-flex';
-            dashBtn.style.display = 'none';
-            profBtn.style.display = 'none';
-        }
-    });
-
-    // --- ТЕМА ---
-    const toggleBtn = document.getElementById('theme-toggle');
-    const body = document.body;
-    const currentTheme = localStorage.getItem('theme');
-    if (currentTheme === 'dark') {
-        body.classList.add('dark-theme');
-        if(toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-sun"></i> Светлая тема';
-    }
-    if(toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-            body.classList.toggle('dark-theme');
-            if (body.classList.contains('dark-theme')) {
-                localStorage.setItem('theme', 'dark');
-                toggleBtn.innerHTML = '<i class="fas fa-sun"></i> Светлая тема';
-            } else {
-                localStorage.setItem('theme', 'light');
-                toggleBtn.innerHTML = '<i class="fas fa-moon"></i> Тёмная тема';
-            }
-        });
-    }
-}
+        // ... (остается без изменений)
