@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Кемерово 42 | Главные новости</title>
+    
+    <!-- OG-теги для превью в мессенджерах -->
+    <meta property="og:title" content="КЕМЕРОВО 42 — Официальный новостной портал">
+    <meta property="og:description" content="Главные новости города, криминал и сводки О МВД.">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=630">
+    <meta property="og:url" content="https://gamer123top.github.io/kemerovo42-site/">
+    <meta name="twitter:card" content="summary_large_image">
+
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -26,7 +34,6 @@
                 <p>Официальный новостной портал</p>
             </div>
             
-            <!-- Кнопки прижаты вправо -->
             <div class="auth-buttons" id="auth-buttons" style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
                 <a href="./admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; display: inline-flex;">Войти</a>
                 <a href="./admin/index.html" id="dash-btn" class="btn-outline" style="text-decoration: none; display: none;">Панель управления</a>
@@ -35,7 +42,7 @@
                     <span id="header-username">Профиль</span>
                 </a>
             </div>
-            <button id="theme-toggle" style="margin-left: 20px;"><i class="fas fa-moon"></i></button>
+            <button id="theme-toggle" style="margin-left: 10px;"><i class="fas fa-moon"></i> Тёмная тема</button>
         </div>
     </header>
 
@@ -49,6 +56,7 @@
     <div class="container">
         <main class="main-content">
             <div id="news-container"><p style="text-align: center; padding: 20px;">Загрузка новостей...</p></div>
+            
             <div style="text-align: center; margin-top: 20px;">
                 <button id="load-more-btn" onclick="loadMore()" style="display: none; padding: 12px 24px; background: var(--accent); border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s;">Показать еще</button>
             </div>
@@ -81,10 +89,12 @@
         const newsContainer = document.getElementById('news-container');
         const loadMoreBtn = document.getElementById('load-more-btn');
         const NEWS_PER_PAGE = 10;
+        
         let lastVisible = null;
         let isFirstLoad = true;
         let gridContainer = null;
 
+        // --- Авторизация ---
         onAuthStateChanged(auth, async (user) => {
             const loginBtn = document.getElementById('login-btn');
             const dashBtn = document.getElementById('dash-btn');
@@ -117,24 +127,44 @@
             return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
 
+        // --- Загрузка новостей ---
         async function loadNews() {
             try {
                 let q;
+                // Если первая загрузка — берем первые 10, иначе — следующие 10 после последней
                 if (isFirstLoad) {
                     q = query(collection(db, "news"), orderBy("date", "desc"), limit(NEWS_PER_PAGE));
                 } else if (lastVisible) {
                     q = query(collection(db, "news"), orderBy("date", "desc"), startAfter(lastVisible), limit(NEWS_PER_PAGE));
-                } else { return; }
+                } else {
+                    return;
+                }
 
                 const querySnapshot = await getDocs(q);
+                
+                // Если новостей нет вообще (первая загрузка) или они кончились
                 if (querySnapshot.empty) { 
                     loadMoreBtn.style.display = 'none'; 
-                    if (isFirstLoad) newsContainer.innerHTML = '<p style="text-align:center; padding:20px;">Новостей пока нет.</p>';
+                    if (isFirstLoad) {
+                        newsContainer.innerHTML = `
+                            <div style="text-align: center; padding: 60px 20px; background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--shadow-sm);">
+                                <i class="fas fa-newspaper" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 15px;"></i>
+                                <h3 style="color: var(--text-muted);">Новостей пока нет</h3>
+                                <p style="color: var(--text-muted); font-size: 0.9rem;">Редакция готовит первые материалы</p>
+                            </div>
+                        `;
+                    }
                     return; 
                 }
 
                 lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
-                loadMoreBtn.style.display = 'block';
+                
+                // Показываем кнопку "Показать еще", ТОЛЬКО если загрузили ровно 10 (значит, могут быть еще)
+                if (querySnapshot.size === NEWS_PER_PAGE) {
+                    loadMoreBtn.style.display = 'block';
+                } else {
+                    loadMoreBtn.style.display = 'none';
+                }
 
                 if (isFirstLoad) {
                     newsContainer.innerHTML = '';
@@ -143,6 +173,7 @@
                     isFirstLoad = false;
                 }
 
+                // Флаг: самая первая новость должна быть большой (Hero). Все остальные - карточки.
                 let isFirstNews = (lastVisible === querySnapshot.docs[querySnapshot.docs.length - 1] && newsContainer.innerHTML === '');
 
                 querySnapshot.forEach((doc) => {
@@ -178,10 +209,12 @@
                     }
                 });
             } catch (error) {
+                console.error("Ошибка загрузки:", error);
                 if (isFirstLoad) newsContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: #e74c3c;">Не удалось загрузить новости.</p>';
             }
         }
 
+        // --- Загрузка популярных новостей (Топ 5) ---
         async function loadPopular() {
             const list = document.getElementById('popular-list');
             try {
