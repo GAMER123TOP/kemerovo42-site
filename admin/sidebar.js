@@ -36,8 +36,10 @@ export function renderSidebar(activePage) {
           <li><a href="index.html" class="${activePage === 'dashboard' ? 'active' : ''}"><i class="fas fa-home"></i> Дашборд</a></li>
           <li><a href="posts.html" class="${activePage === 'posts' ? 'active' : ''}"><i class="fas fa-newspaper"></i> Записи (Новости)</a></li>
           <li><a href="create.html" class="${activePage === 'create' ? 'active' : ''}"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
-          <!-- НОВЫЙ ПУНКТ МЕНЮ -->
+          
+          <!-- ВКЛАДКА КАТЕГОРИИ -->
           <li><a href="categories.html" class="${activePage === 'categories' ? 'active' : ''}"><i class="fas fa-tags"></i> Категории</a></li>
+          
           <li id="menu-users-li" style="display: none;"><a href="users.html" class="${activePage === 'users' ? 'active' : ''}"><i class="fas fa-users"></i> Пользователи</a></li>
           <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
         </ul>
