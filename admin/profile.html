@@ -96,10 +96,26 @@
     window.saveProfile = async function() {
       const displayName = document.getElementById('displayName').value.trim();
       const photoURL = document.getElementById('avatar-url').value.trim();
+      
+      const userEmail = auth.currentUser.email; 
+
+      // Получаем роль из токена (claims)
+      const token = await auth.currentUser.getIdTokenResult();
+      let userRole = 'editor'; 
+      if (token.claims.admin) userRole = 'admin';
+      else if (token.claims.editor) userRole = 'editor';
+
       try {
-        await setDoc(doc(db, 'users', currentUid), { displayName, photoURL }, { merge: true });
+        await setDoc(doc(db, 'users', currentUid), { 
+          displayName: displayName, 
+          photoURL: photoURL,
+          email: userEmail,
+          role: userRole
+        }, { merge: true });
         alert('Профиль обновлен!');
-      } catch (e) { alert('Ошибка сохранения: ' + e.message); }
+      } catch (e) { 
+        alert('Ошибка сохранения: ' + e.message); 
+      }
     };
 
     window.changePassword = async function() {
