@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Комментарии | Кемерово 42</title>
+  <link rel="stylesheet" href="admin-style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Все комментарии</h1>
+    </div>
+
+    <div class="card">
+      <table class="wp-table">
+        <thead>
+          <tr>
+            <th>Автор</th>
+            <th>Текст</th>
+            <th>Новость</th>
+            <th>Дата</th>
+            <th style="text-align: right;">Действия</th>
+          </tr>
+        </thead>
+        <tbody id="comments-list"><tr><td colspan="5" style="text-align:center;">Загрузка...</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script type="module">
+    import { renderSidebar } from './sidebar.js';
+    import { firebaseConfig } from '../firebase-config.js';
+    import { showToast, showConfirm } from '../ui.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    renderSidebar('comments');
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function loadComments() {
+      const tbody = document.getElementById('comments-list');
+      try {
+        const snapshot = await getDocs(collection(db, "comments"));
+        tbody.innerHTML = '';
+        
+        if (snapshot.empty) { 
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Комментариев пока нет</td></tr>'; 
+            return; 
+        }
+
+        const commentsArray = [];
+        snapshot.forEach(docSnap => commentsArray.push({ id: docSnap.id, ...docSnap.data() }));
+        commentsArray.sort((a, b) => (b.date ? b.date.seconds : 0) - (a.date ? a.date.seconds : 0));
+
+        for (const c of commentsArray) {
+            let dateStr = c.date && c.date.seconds ? new Date(c.date.seconds * 1000).toLocaleString('ru-RU') : '—';
+            
+            // Получаем заголовок новости
+            let newsTitle = 'Удалена';
+            try {
+                const newsSnap = await getDoc(doc(db, "news", c.newsId));
+                if (newsSnap.exists()) newsTitle = newsSnap.data().title;
+            } catch(e) {}
+
+            tbody.innerHTML += `
+              <tr>
+                <td><strong>${c.author}</strong></td>
+                <td style="max-width: 300px; word-wrap: break-word;">${c.text}</td>
+                <td><a href="../article.html?id=${c.newsId}" target="_blank" style="color: var(--accent); text-decoration: none;">${newsTitle}</a></td>
+                <td>${dateStr}</td>
+                <td style="text-align: right;">
+                  <button onclick="deleteComment('${c.id}')" class="btn-icon danger" title="Удалить"><i class="fas fa-trash"></i></button>
+                </td>
+              </tr>
+            `;
+        }
+      } catch (e) { 
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Ошибка загрузки</td></tr>'; 
+      }
+    }
+
+    window.deleteComment = async function(id) {
+      showConfirm('Удалить комментарий', 'Вы уверены, что хотите удалить этот комментарий?', async () => {
+        try {
+            await deleteDoc(doc(db, "comments", id));
+            showToast('Комментарий удален', 'success');
+            loadComments();
+        } catch(e) { showToast('Ошибка удаления', 'error'); }
+      });
+    };
+
+    loadComments();
+  </script>
+</body>
+</html>
