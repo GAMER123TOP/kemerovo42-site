@@ -27,6 +27,7 @@ export function renderSidebar(activePage) {
         <ul class="sidebar-menu">
           <li><a href="index.html" class="${activePage === 'dashboard' ? 'active' : ''}"><i class="fas fa-home"></i> Панель управления</a></li>
           <li><a href="posts.html" class="${activePage === 'posts' ? 'active' : ''}"><i class="fas fa-newspaper"></i> Записи</a></li>
+          <li><a href="archive.html" class="${activePage === 'archive' ? 'active' : ''}"><i class="fas fa-archive"></i> Архив</a></li>
           <li><a href="create.html" class="${activePage === 'create' ? 'active' : ''}"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
           <li><a href="categories.html" class="${activePage === 'categories' ? 'active' : ''}"><i class="fas fa-tags"></i> Категории</a></li>
           <li><a href="polls.html" class="${activePage === 'polls' ? 'active' : ''}"><i class="fas fa-poll"></i> Опросы</a></li>
