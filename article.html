@@ -8,12 +8,25 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <style>
-        .like-btn { margin-top: 30px; padding: 10px 20px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: 0.2s; user-select: none; }
-        .like-btn:hover { background: #e2e8f0; }
-        .article-text { font-size: 1.1rem; line-height: 1.8; color: var(--text-color); word-wrap: break-word; white-space: normal; }
+        .like-btn, .save-btn { margin-top: 20px; padding: 10px 20px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; user-select: none; margin-right: 10px; }
+        .like-btn:hover, .save-btn:hover { background: #e2e8f0; }
+        .article-text { font-size: 1.1rem; line-height: 1.8; color: var(--text-color); word-wrap: break-word; white-space: normal; margin-bottom: 30px; }
         .article-text p { margin-bottom: 20px; }
         .author-link { color: var(--text-color); text-decoration: none; font-weight: 600; transition: 0.2s; }
         .author-link:hover { color: var(--accent); }
+        
+        /* Стили для комментариев */
+        .comments-section { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 30px; }
+        .comments-section h3 { font-family: 'Montserrat'; margin-bottom: 20px; font-size: 1.3rem; }
+        .comment-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
+        .comment-form textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; resize: vertical; min-height: 80px; }
+        .comment-form button { align-self: flex-start; padding: 10px 20px; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        .comment-item { background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #e2e8f0; }
+        .comment-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted); }
+        .comment-author { font-weight: 700; color: var(--header-bg); }
+        .comment-text { font-size: 0.95rem; line-height: 1.5; }
+        .btn-del-comment { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; }
+        .btn-del-comment:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -22,14 +35,13 @@
 
     <div class="article-container" id="article-box"><p>Загрузка...</p></div>
 
-    <!-- Кнопка наверх -->
     <button id="scroll-top-btn" title="Наверх"><i class="fas fa-arrow-up"></i></button>
 
     <script type="module">
         import { renderHeader } from './header.js';
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, increment, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, increment, arrayUnion, arrayRemove, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         renderHeader();
@@ -40,9 +52,17 @@
         const newsId = new URLSearchParams(window.location.search).get('id');
         const articleBox = document.getElementById('article-box');
         let currentUser = null;
-        let currentLikes = [];
+        let userRole = 'reader';
 
-        onAuthStateChanged(auth, (user) => { currentUser = user; });
+        onAuthStateChanged(auth, async (user) => { 
+            currentUser = user; 
+            if (user) {
+                const token = await user.getIdTokenResult();
+                if (token.claims.admin) userRole = 'admin';
+                else if (token.claims.moderator) userRole = 'moderator';
+            }
+            if (newsId) loadArticle();
+        });
 
         // Кнопка Наверх
         const scrollBtn = document.getElementById('scroll-top-btn');
@@ -75,7 +95,7 @@
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         
-                        // Защита от накрутки
+                        // Накрутка просмотров
                         const viewedKey = `viewed_${newsId}`;
                         if (!localStorage.getItem(viewedKey)) {
                             updateDoc(docRef, { views: increment(1) }).catch(() => {});
@@ -85,9 +105,19 @@
                         let dateStr = formatDateTime(data.date);
                         const imgSrc = data.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800';
                         
-                        currentLikes = data.likes || [];
-                        const isLiked = currentUser && currentLikes.includes(currentUser.uid);
+                        const likesArray = data.likes || [];
+                        const isLiked = currentUser && likesArray.includes(currentUser.uid);
                         const heartIcon = isLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
+
+                        // Проверка на закладку
+                        let isSaved = false;
+                        if (currentUser) {
+                            const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+                            if (userSnap.exists() && userSnap.data().bookmarks && userSnap.data().bookmarks.includes(newsId)) {
+                                isSaved = true;
+                            }
+                        }
+                        const saveIcon = isSaved ? '<i class="fas fa-bookmark" style="color: var(--accent);"></i>' : '<i class="far fa-bookmark"></i>';
 
                         const authorName = escapeHTML(data.author || 'Редакция');
                         const authorLink = `<a href="index.html?author=${encodeURIComponent(authorName)}" class="author-link">${authorName}</a>`;
@@ -103,42 +133,128 @@
                             
                             <div class="article-text">${DOMPurify.sanitize(data.text)}</div>
                             
-                            <button id="like-btn" class="like-btn">
-                                <span id="heart-icon">${heartIcon}</span> Нравится (<span id="like-count">${currentLikes.length}</span>)
-                            </button>
-                            
+                            <div>
+                                <button id="like-btn" class="like-btn">
+                                    <span id="heart-icon">${heartIcon}</span> Нравится (<span id="like-count">${likesArray.length}</span>)
+                                </button>
+                                <button id="save-btn" class="save-btn">
+                                    <span id="save-icon">${saveIcon}</span> В закладки
+                                </button>
+                            </div>
+
+                            <!-- Блок комментариев -->
+                            <div class="comments-section">
+                                <h3>Комментарии</h3>
+                                <div id="comments-list">Загрузка...</div>
+                                ${currentUser ? `
+                                    <div class="comment-form">
+                                        <textarea id="comment-text" placeholder="Написать комментарий..."></textarea>
+                                        <button onclick="addComment()">Отправить</button>
+                                    </div>
+                                ` : `<p style="color: var(--text-muted); font-size: 0.9rem;">Войдите в аккаунт, чтобы оставить комментарий.</p>`}
+                            </div>
+
                             <a href="index.html" class="back-btn">← Назад</a>
                         `;
 
+                        // Лайк
                         document.getElementById('like-btn').onclick = async () => {
-                            if (!currentUser) return alert('Войдите в аккаунт, чтобы оценивать новости!');
-                            
+                            if (!currentUser) return alert('Войдите в аккаунт!');
                             const heartSpan = document.getElementById('heart-icon');
                             const countSpan = document.getElementById('like-count');
-                            
                             heartSpan.classList.add('like-animate');
                             setTimeout(() => heartSpan.classList.remove('like-animate'), 800);
 
-                            if (currentLikes.includes(currentUser.uid)) {
+                            if (likesArray.includes(currentUser.uid)) {
                                 await updateDoc(docRef, { likes: arrayRemove(currentUser.uid) });
                                 countSpan.innerText = parseInt(countSpan.innerText) - 1;
-                                currentLikes = currentLikes.filter(id => id !== currentUser.uid);
                                 heartSpan.innerHTML = '<i class="far fa-heart"></i>';
                             } else {
                                 await updateDoc(docRef, { likes: arrayUnion(currentUser.uid) });
                                 countSpan.innerText = parseInt(countSpan.innerText) + 1;
-                                currentLikes.push(currentUser.uid);
                                 heartSpan.innerHTML = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
                             }
                         };
+
+                        // Закладка
+                        document.getElementById('save-btn').onclick = async () => {
+                            if (!currentUser) return alert('Войдите в аккаунт!');
+                            const userRef = doc(db, "users", currentUser.uid);
+                            const saveIconSpan = document.getElementById('save-icon');
+                            
+                            if (isSaved) {
+                                await updateDoc(userRef, { bookmarks: arrayRemove(newsId) });
+                                saveIconSpan.innerHTML = '<i class="far fa-bookmark"></i>';
+                                isSaved = false;
+                            } else {
+                                await updateDoc(userRef, { bookmarks: arrayUnion(newsId) });
+                                saveIconSpan.innerHTML = '<i class="fas fa-bookmark" style="color: var(--accent);"></i>';
+                                isSaved = true;
+                            }
+                        };
+
+                        loadComments();
 
                     } else {
                         articleBox.innerHTML = '<h1>Новость удалена</h1><a href="index.html" class="back-btn">На главную</a>';
                     }
                 } catch (error) { articleBox.innerHTML = '<h1>Ошибка загрузки</h1>'; }
             }
-            loadArticle();
         }
+
+        // Загрузка и отправка комментариев
+        function loadComments() {
+            const list = document.getElementById('comments-list');
+            const q = query(collection(db, "comments"), where("newsId", "==", newsId), orderBy("date", "desc"));
+            onSnapshot(q, (snapshot) => {
+                list.innerHTML = '';
+                if (snapshot.empty) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Пока нет комментариев.</p>'; return; }
+                
+                snapshot.forEach(docSnap => {
+                    const d = docSnap.data();
+                    let dateStr = d.date && d.date.seconds ? new Date(d.date.seconds * 1000).toLocaleString('ru-RU') : '—';
+                    
+                    // Кнопка удаления для модератора/админа
+                    const delBtn = (userRole === 'admin' || userRole === 'moderator') 
+                        ? `<button onclick="deleteComment('${docSnap.id}')" class="btn-del-comment"><i class="fas fa-trash"></i> Удалить</button>` 
+                        : '';
+
+                    list.innerHTML += `
+                        <div class="comment-item">
+                            <div class="comment-header">
+                                <span class="comment-author">${escapeHTML(d.author)}</span>
+                                <span>${dateStr}</span>
+                            </div>
+                            <div class="comment-text">${escapeHTML(d.text)}</div>
+                            ${delBtn}
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        window.addComment = async function() {
+            const text = document.getElementById('comment-text').value.trim();
+            if (!text) return alert('Напишите комментарий!');
+            
+            const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+            const authorName = userSnap.exists() && userSnap.data().displayName ? userSnap.data().displayName : currentUser.email.split('@')[0];
+
+            await addDoc(collection(db, "comments"), {
+                newsId: newsId,
+                author: authorName,
+                text: text,
+                date: serverTimestamp(),
+                uid: currentUser.uid
+            });
+            document.getElementById('comment-text').value = '';
+        };
+
+        window.deleteComment = async function(id) {
+            if(confirm('Удалить комментарий?')) {
+                await deleteDoc(doc(db, "comments", id));
+            }
+        };
     </script>
 </body>
 </html>
