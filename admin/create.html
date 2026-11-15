@@ -13,29 +13,10 @@
   </style>
 </head>
 <body>
-
-  <aside class="sidebar">
-    <div class="sidebar-logo">КЕМЕРОВО <span>42</span></div>
-    <ul class="sidebar-menu">
-      <li><a href="index.html"><i class="fas fa-home"></i> Дашборд</a></li>
-      <li><a href="posts.html"><i class="fas fa-newspaper"></i> Записи (Новости)</a></li>
-      <li><a href="create.html" class="active"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
-      <li><a href="users.html" id="menu-users" style="display: none;"><i class="fas fa-users"></i> Пользователи</a></li>
-      <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
-    </ul>
-    <div class="sidebar-user">
-      <img id="sb-avatar" src="https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png" alt="Аватар">
-      <div class="sidebar-user-info">
-        <span class="sidebar-user-name" id="sb-name">Загрузка...</span>
-        <span class="sidebar-user-role" id="sb-role">...</span>
-      </div>
-    </div>
-  </aside>
+  <div id="sidebar-container"></div>
 
   <main class="main-content">
-    <div class="page-header">
-      <h1 class="page-title">Новая новость</h1>
-    </div>
+    <div class="page-header"><h1 class="page-title">Новая новость</h1></div>
 
     <div class="card">
       <div class="form-group">
@@ -60,7 +41,7 @@
       </div>
 
       <div class="form-group">
-        <label>Краткое описание (для карточки на главной)</label>
+        <label>Краткое описание</label>
         <input type="text" id="description" class="form-control" placeholder="Пара предложений...">
       </div>
 
@@ -76,82 +57,50 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
-  
   <script type="module">
+    import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    renderSidebar('create');
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
     const quill = new Quill('#editor-container', {
-      theme: 'snow',
-      placeholder: 'Начните писать текст...',
-      modules: {
-        toolbar: [
-          ['bold', 'italic', 'underline'],
-          [{ 'header': 2 }],
-          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-          ['link'],
-          ['clean']
-        ]
-      }
+      theme: 'snow', placeholder: 'Начните писать текст...',
+      modules: { toolbar: [ ['bold', 'italic', 'underline'], [{ 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['link'], ['clean'] ] }
     });
 
-    let currentUserEmail = null;
-    let currentUserDisplayName = '';
+    let currentUserDisplayName = 'Редакция';
+    let currentUserEmail = '';
 
     onAuthStateChanged(auth, async (user) => {
-      if (!user) { window.location.href = 'login.html'; return; }
+      if (!user) return;
       currentUserEmail = user.email;
-      
-      const token = await user.getIdTokenResult();
-      const role = token.claims.admin ? 'admin' : (token.claims.editor ? 'editor' : 'journalist');
-      
-      document.getElementById('sb-name').innerText = user.email.split('@')[0];
-      document.getElementById('sb-role').innerText = role === 'admin' ? 'Администратор' : 'Редактор';
-      if (role === 'admin') document.getElementById('menu-users').style.display = 'block';
-
-      // Загружаем ФИО и аватарку из профиля
       const userSnap = await getDoc(doc(db, "users", user.uid));
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        if (userData.photoURL) {
-          document.getElementById('sb-avatar').src = userData.photoURL;
-        }
-        currentUserDisplayName = userData.displayName || user.email.split('@')[0];
-      } else {
-        currentUserDisplayName = user.email.split('@')[0];
-      }
+      if (userSnap.exists()) currentUserDisplayName = userSnap.data().displayName || user.email.split('@')[0];
     });
 
     window.publish = async function() {
       const title = document.getElementById('title').value;
       const text = quill.root.innerHTML;
-      
       if(!title || quill.getText().trim() === '') return alert("Заполните заголовок и текст!");
 
       try {
         await addDoc(collection(db, "news"), {
-          title: title,
-          tag: document.getElementById('tag').value,
+          title: title, tag: document.getElementById('tag').value,
           image: document.getElementById('image').value || '',
           description: document.getElementById('description').value || '',
-          text: text,
-          author: currentUserDisplayName, // Используем ФИО
-          date: serverTimestamp(),
-          views: 0
+          text: text, author: currentUserDisplayName,
+          date: serverTimestamp(), views: 0
         });
-        
         alert("Новость опубликована!");
         window.location.href = 'posts.html';
-      } catch (error) {
-        console.error(error);
-        alert("Ошибка публикации! Проверьте права.");
-      }
+      } catch (error) { alert("Ошибка публикации!"); }
     };
   </script>
 </body>
