@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Рубрика | Кемерово 42</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div id="header-container"></div>
+
+    <nav id="main-nav">
+        <a href="index.html">Главная</a>
+    </nav>
+
+    <div class="container">
+        <main class="main-content">
+            <div class="page-header" style="margin-bottom: 30px;">
+                <h1 id="category-title" style="font-family: 'Montserrat'; font-size: 2rem; color: var(--header-bg); border-left: 5px solid var(--accent); padding-left: 15px;">Загрузка...</h1>
+            </div>
+            
+            <div id="news-container"><p style="text-align: center; padding: 20px;">Загрузка новостей...</p></div>
+        </main>
+
+        <aside class="sidebar">
+            <div class="widget">
+                <h3><i class="fas fa-fire" style="color: #e74c3c;"></i> Читают сейчас</h3>
+                <ul id="popular-list" style="list-style: none; display: flex; flex-direction: column; gap: 15px;">
+                    <li style="color: var(--text-muted); font-size: 0.9rem;">Загрузка...</li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+    <footer><p>&copy; 2026 Телепрограмма «Кемерово 42».</p></footer>
+
+    <script type="module">
+        import { renderHeader } from './header.js';
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, orderBy, where, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        renderHeader();
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        const newsContainer = document.getElementById('news-container');
+        const urlParams = new URLSearchParams(window.location.search);
+        const categoryTag = urlParams.get('tag');
+
+        // Загрузка категорий в верхнее меню
+        async function loadNavCategories() {
+            const nav = document.getElementById('main-nav');
+            const snapshot = await getDocs(collection(db, "categories"));
+            snapshot.forEach(doc => {
+                const cat = doc.data();
+                nav.innerHTML += `<a href="category.html?tag=${encodeURIComponent(cat.name)}" ${cat.name === categoryTag ? 'class="active"' : ''}>${cat.name}</a>`;
+            });
+        }
+        loadNavCategories();
+
+        // Если тега нет в ссылке — на главную
+        if (!categoryTag) {
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('category-title').innerText = categoryTag;
+        }
+
+        // Форматирование времени (Кемерово UTC+7)
+        function formatDateTime(timestamp) {
+            if (!timestamp || !timestamp.seconds) return 'Дата не указана';
+            const utcDate = new Date(timestamp.seconds * 1000);
+            const kDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+            return `${kDate.toISOString().slice(0, 10).split('-').reverse().join('.')} ${kDate.toISOString().slice(11, 16)}`;
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        // Загрузка новостей по категории
+        async function loadCategoryNews() {
+            try {
+                const q = query(collection(db, "news"), where("tag", "==", categoryTag), orderBy("date", "desc"));
+                const snapshot = await getDocs(q);
+                
+                newsContainer.innerHTML = '';
+                if (snapshot.empty) {
+                    newsContainer.innerHTML = `<div style="text-align: center; padding: 60px 20px; background: var(--card-bg); border-radius: 16px; box-shadow: var(--shadow-sm);"><i class="fas fa-folder-open" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 15px;"></i><h3 style="color: var(--text-muted);">В рубрике «${categoryTag}» пока нет новостей</h3></div>`;
+                    return;
+                }
+
+                let grid = document.createElement('div');
+                grid.className = 'news-grid';
+                newsContainer.appendChild(grid);
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    let dateStr = formatDateTime(data.date);
+                    const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=500';
+                    
+                    grid.innerHTML += `
+                        <a href="article.html?id=${doc.id}" class="news-card" style="text-decoration: none; color: inherit;">
+                            <img src="${escapeHTML(imgSrc)}" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=400'">
+                            <div class="card-content">
+                                <span class="tag">${escapeHTML(data.tag || 'НОВОСТЬ')}</span>
+                                <h3>${escapeHTML(data.title)}</h3>
+                                <p>${escapeHTML(data.description || '')}</p>
+                                <span class="date" style="display:block; margin-top:10px; font-size:0.85rem;"><i class="far fa-clock"></i> ${dateStr} (Кемерово)</span>
+                            </div>
+                        </a>
+                    `;
+                });
+            } catch (error) {
+                console.error("Ошибка:", error);
+                newsContainer.innerHTML = '<p style="text-align: center; color: red;">Ошибка загрузки новостей.</p>';
+            }
+        }
+
+        // Топ-5
+        async function loadPopular() {
+            const list = document.getElementById('popular-list');
+            try {
+                const q = query(collection(db, "news"), orderBy("views", "desc"), limit(5));
+                const snapshot = await getDocs(q);
+                list.innerHTML = '';
+                if (snapshot.empty) { list.innerHTML = '<li style="color: var(--text-muted);">Пока нет статистики</li>'; return; }
+                let index = 1;
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    list.innerHTML += `
+                        <li style="display: flex; gap: 12px; align-items: flex-start;">
+                            <span style="font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.2rem; color: var(--accent); line-height: 1;">${index}</span>
+                            <a href="article.html?id=${doc.id}" style="text-decoration: none; color: var(--text-color); font-size: 0.9rem; font-weight: 500; line-height: 1.4;">${escapeHTML(data.title)}</a>
+                        </li>`;
+                    index++;
+                });
+            } catch (e) { list.innerHTML = '<li style="color: #e74c3c;">Ошибка.</li>'; }
+        }
+
+        loadCategoryNews();
+        loadPopular();
+    </script>
+</body>
+</html>
