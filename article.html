@@ -26,7 +26,7 @@
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -35,15 +35,9 @@
         const newsId = urlParams.get('id');
         const articleBox = document.getElementById('article-box');
 
-        // Функция для защиты от XSS (внедрения скриптов)
         function escapeHTML(str) {
             if (!str) return '';
-            return str.toString()
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
+            return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
 
         if (!newsId) {
@@ -57,7 +51,9 @@
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         
-                        // Безопасная проверка даты
+                        // Считаем просмотры
+                        updateDoc(docRef, { views: increment(1) }).catch(() => {});
+
                         let dateStr = 'Дата не указана';
                         if (data.date && data.date.seconds) {
                             dateStr = new Date(data.date.seconds * 1000).toLocaleDateString('ru-RU');
@@ -72,18 +68,15 @@
                                 <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
                                 <span class="author"><i class="far fa-user"></i> ${escapeHTML(data.author || 'Редакция')}</span>
                             </div>
-                            <img src="${escapeHTML(imgSrc)}" class="article-image" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800'">
-                            <div class="article-text">
-                                ${data.text} <!-- Сам текст новости оставляем без экранирования, так как он создается в редакторе Quill -->
-                            </div>
+                            <img src="${escapeHTML(imgSrc)}" class="article-image" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167'">
+                            <div class="article-text">${data.text}</div>
                             <a href="index.html" class="back-btn">← Назад</a>
                         `;
                     } else {
-                        articleBox.innerHTML = '<h1>Новость удалена или не существует</h1><a href="index.html" class="back-btn">На главную</a>';
+                        articleBox.innerHTML = '<h1>Новость удалена</h1><a href="index.html" class="back-btn">На главную</a>';
                     }
                 } catch (error) {
-                    console.error("Ошибка загрузки:", error);
-                    articleBox.innerHTML = '<h1>Ошибка загрузки статьи</h1><a href="index.html" class="back-btn">На главную</a>';
+                    articleBox.innerHTML = '<h1>Ошибка загрузки статьи</h1>';
                 }
             }
             loadArticle();
