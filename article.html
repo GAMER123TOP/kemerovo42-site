@@ -1,296 +1,215 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Статья | Кемерово 42</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
-    <style>
-        .like-btn, .save-btn { margin-top: 20px; padding: 10px 20px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; user-select: none; margin-right: 10px; }
-        .like-btn:hover, .save-btn:hover { background: #e2e8f0; }
-        .article-text { font-size: 1.1rem; line-height: 1.8; color: var(--text-color); word-wrap: break-word; white-space: normal; margin-bottom: 30px; }
-        .article-text p { margin-bottom: 20px; }
-        .author-link { color: var(--text-color); text-decoration: none; font-weight: 600; transition: 0.2s; }
-        .author-link:hover { color: var(--accent); }
-        
-        /* Стили для комментариев */
-        .comments-section { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 30px; }
-        .comments-section h3 { font-family: 'Montserrat'; margin-bottom: 20px; font-size: 1.3rem; }
-        .comment-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; margin-top: 20px; }
-        .comment-form textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; resize: vertical; min-height: 80px; }
-        .comment-form button { align-self: flex-start; padding: 10px 20px; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
-        .comment-item { background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #e2e8f0; }
-        .comment-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted); }
-        .comment-author { font-weight: 700; color: var(--header-bg); }
-        .comment-text { font-size: 0.95rem; line-height: 1.5; word-wrap: break-word; }
-        .btn-del-comment { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; margin-top: 10px; padding: 0; }
-        .btn-del-comment:hover { text-decoration: underline; }
-
-        /* СЕТКА ДЛЯ КАРТИНОК В ТЕКСТЕ */
-        .article-text img { 
-            max-width: 100%; 
-            border-radius: 8px; 
-            display: inline-block; 
-            margin: 5px; 
-            width: calc(33.33% - 10px); /* 3 картинки в ряд */
-            vertical-align: top; 
-            object-fit: cover; 
-            height: 200px; /* Одинаковая высота */
-            cursor: pointer; 
-            transition: transform 0.2s; 
-        }
-        .article-text img:hover { transform: scale(1.02); }
-        
-        /* Если картинка одна, она растягивается */
-        .article-text img:only-child {
-            width: 100%;
-            height: auto;
-            max-height: 500px;
-            margin: 10px 0;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <title>Редактор новости | Кемерово 42</title>
+  <link rel="stylesheet" href="admin-style.css">
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    #editor-container { height: 300px; margin-bottom: 20px; background: white; border-radius: 8px; }
+    .ql-toolbar { border-radius: 8px 8px 0 0; border-color: var(--border) !important; }
+    .ql-container { border-color: var(--border) !important; border-radius: 0 0 8px 8px; font-family: 'Inter', sans-serif; font-size: 1rem;}
+    .btn-draft { background: #e2e8f0; color: #0f172a; margin-left: 10px; }
+    .btn-draft:hover { background: #cbd5e1; }
+    
+    .gallery-row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .gallery-row input { flex-grow: 1; }
+    .btn-remove-photo { background: #ef4444; color: white; border: none; border-radius: 6px; padding: 0 15px; cursor: pointer; }
+  </style>
 </head>
 <body>
+  <div id="sidebar-container"></div>
 
-    <div id="header-container"></div>
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title" id="page-title">Новая новость</h1>
+    </div>
 
-    <div class="article-container" id="article-box"><p>Загрузка...</p></div>
+    <div class="card">
+      <div class="form-group">
+        <label>Заголовок</label>
+        <input type="text" id="title" class="form-control" placeholder="Введите заголовок...">
+      </div>
 
-    <button id="scroll-top-btn" title="Наверх"><i class="fas fa-arrow-up"></i></button>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="form-group">
+          <label>Рубрика</label>
+          <select id="tag" class="form-control">
+            <option value="Новость">Обычная новость</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Главная обложка (URL)</label>
+          <input type="text" id="image" class="form-control" placeholder="Ссылка на Imgur">
+        </div>
+      </div>
 
-    <script type="module">
-        import { renderHeader } from './header.js';
-        import { firebaseConfig } from './firebase-config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, increment, arrayUnion, arrayRemove, collection, addDoc, query, where, orderBy, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+      <div class="form-group">
+        <label>Краткое описание</label>
+        <input type="text" id="description" class="form-control" placeholder="Пара предложений...">
+      </div>
 
-        renderHeader();
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+      <div class="form-group">
+        <label>Текст новости</label>
+        <div id="editor-container"></div>
+      </div>
+
+      <!-- БЛОК ГАЛЕРЕИ -->
+      <div class="form-group" style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
+        <label style="font-size: 1.1rem; margin-bottom: 10px;">Фотогалерея (доп. фото)</label>
+        <div id="gallery-container"></div>
+        <button type="button" onclick="addGalleryField()" class="btn-create" style="margin-top: 10px; background: #3b82f6; color: white;">
+          <i class="fas fa-plus"></i> Добавить ещё одно фото
+        </button>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button onclick="saveNews('published')" class="btn-create" style="flex: 2; justify-content: center; font-size: 1.1rem; padding: 15px;">
+          <i class="fas fa-paper-plane"></i> Опубликовать
+        </button>
+        <button onclick="saveNews('draft')" class="btn-create btn-draft" style="flex: 1; justify-content: center; font-size: 1.1rem; padding: 15px;">
+          <i class="fas fa-save"></i> В черновик
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <script type="module">
+    import { renderSidebar } from './sidebar.js';
+    import { firebaseConfig } from '../firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    renderSidebar('create');
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Простой редактор без кастомных кнопок картинок (только текст)
+    const quill = new Quill('#editor-container', {
+      theme: 'snow', 
+      placeholder: 'Начните писать текст...',
+      modules: { 
+        toolbar: [
+            ['bold', 'italic', 'underline'], 
+            [{ 'header': 2 }], 
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
+            ['link'], 
+            ['clean'] 
+        ]
+      }
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('id');
+    let currentUserDisplayName = 'Редакция';
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      if (userSnap.exists()) currentUserDisplayName = userSnap.data().displayName || user.email.split('@')[0];
+    });
+
+    async function loadCategoriesToSelect() {
+        const tagSelect = document.getElementById('tag');
+        const snapshot = await getDocs(collection(db, "categories"));
+        snapshot.forEach(doc => {
+            const cat = doc.data();
+            const option = document.createElement('option');
+            option.value = cat.name;
+            option.textContent = cat.name;
+            tagSelect.appendChild(option);
+        });
+    }
+    loadCategoriesToSelect();
+
+    // --- УПРАВЛЕНИЕ ПОЛЯМИ ГАЛЕРЕИ ---
+    function addGalleryField(url = '') {
+        const container = document.getElementById('gallery-container');
+        const row = document.createElement('div');
+        row.className = 'gallery-row';
+        row.innerHTML = `
+            <input type="text" class="form-control gallery-input" placeholder="https://i.imgur.com/..." value="${url}">
+            <button type="button" class="btn-remove-photo" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
+        `;
+        container.appendChild(row);
+    }
+
+    // Делаем функцию глобальной, чтобы работала кнопка в HTML
+    window.addGalleryField = addGalleryField;
+
+    // При загрузке страницы добавляем одно пустое поле (если это новая новость)
+    if (!editId) addGalleryField();
+
+    // Загрузка данных для редактирования
+    if (editId) {
+        document.getElementById('page-title').innerText = 'Редактирование новости';
+        document.querySelector('button[onclick="saveNews(\'published\')"]').innerHTML = '<i class="fas fa-save"></i> Сохранить и опубликовать';
         
-        const newsId = new URLSearchParams(window.location.search).get('id');
-        const articleBox = document.getElementById('article-box');
-        let currentUser = null;
-        let userRole = 'reader';
-
-        onAuthStateChanged(auth, async (user) => { 
-            currentUser = user; 
-            if (user) {
-                const token = await user.getIdTokenResult();
-                if (token.claims.admin) userRole = 'admin';
-                else if (token.claims.moderator) userRole = 'moderator';
-            }
-        });
-
-        const scrollBtn = document.getElementById('scroll-top-btn');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 300) scrollBtn.classList.add('show');
-            else scrollBtn.classList.remove('show');
-        });
-        scrollBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-
-        function escapeHTML(str) {
-            if (!str) return '';
-            return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-        }
-
-        function formatDateTime(timestamp) {
-            if (!timestamp || !timestamp.seconds) return 'Дата не указана';
-            const utcDate = new Date(timestamp.seconds * 1000);
-            const kDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
-            return `${kDate.toISOString().slice(0, 10).split('-').reverse().join('.')} ${kDate.toISOString().slice(11, 16)} (Кемерово)`;
-        }
-
-        async function loadArticle() {
-            if (!newsId) {
-                articleBox.innerHTML = '<h1>Статья не найдена</h1><a href="index.html" class="back-btn">На главную</a>';
-                return;
-            }
-
-            try {
-                const docRef = doc(db, "news", newsId);
-                const docSnap = await getDoc(docRef);
+        getDoc(doc(db, "news", editId)).then(docSnap => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('title').value = data.title || '';
+                document.getElementById('image').value = data.image || '';
+                document.getElementById('description').value = data.description || '';
                 
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    
-                    const viewedKey = `viewed_${newsId}`;
-                    if (!localStorage.getItem(viewedKey)) {
-                        updateDoc(docRef, { views: increment(1) }).catch(() => {});
-                        localStorage.setItem(viewedKey, 'true');
-                    }
+                setTimeout(() => {
+                    const tagSelect = document.getElementById('tag');
+                    if (data.tag) tagSelect.value = data.tag;
+                }, 500);
 
-                    let dateStr = formatDateTime(data.date);
-                    const imgSrc = data.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800';
-                    
-                    let likesArray = data.likes || [];
-                    if (likesArray.length < 0) likesArray = []; 
-                    const isLiked = currentUser && likesArray.includes(currentUser.uid);
-                    const heartIcon = isLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
+                if (data.text) quill.clipboard.dangerouslyPasteHTML(data.text);
 
-                    let isSaved = false;
-                    if (currentUser) {
-                        const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-                        if (userSnap.exists() && userSnap.data().bookmarks && userSnap.data().bookmarks.includes(newsId)) {
-                            isSaved = true;
-                        }
-                    }
-                    const saveIcon = isSaved ? '<i class="fas fa-bookmark" style="color: var(--accent);"></i>' : '<i class="far fa-bookmark"></i>';
-
-                    const authorName = escapeHTML(data.author || 'Редакция');
-                    const authorLink = `<a href="index.html?author=${encodeURIComponent(authorName)}" class="author-link">${authorName}</a>`;
-
-                    articleBox.innerHTML = `
-                        <h1 class="article-title">${escapeHTML(data.title)}</h1>
-                        <div class="article-meta">
-                            <span class="tag">${escapeHTML(data.tag || 'НОВОСТЬ')}</span>
-                            <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
-                            <span class="author"><i class="far fa-user"></i> ${authorLink}</span>
-                        </div>
-                        <img src="${escapeHTML(imgSrc)}" class="article-image" onerror="this.style.display='none'">
-                        
-                        <div class="article-text">${DOMPurify.sanitize(data.text)}</div>
-                        
-                        <div>
-                            <button id="like-btn" class="like-btn">
-                                <span id="heart-icon">${heartIcon}</span> Нравится (<span id="like-count">${likesArray.length}</span>)
-                            </button>
-                            <button id="save-btn" class="save-btn">
-                                <span id="save-icon">${saveIcon}</span> В закладки
-                            </button>
-                        </div>
-
-                        <div class="comments-section">
-                            <h3>Комментарии</h3>
-                            <div id="comments-list">Загрузка...</div>
-                            ${currentUser ? `
-                                <div class="comment-form">
-                                    <textarea id="comment-text" placeholder="Написать комментарий..."></textarea>
-                                    <button onclick="addComment()">Отправить</button>
-                                </div>
-                            ` : `<p style="color: var(--text-muted); font-size: 0.9rem;">Войдите в аккаунт, чтобы оставить комментарий.</p>`}
-                        </div>
-
-                        <a href="index.html" class="back-btn">← Назад</a>
-                    `;
-
-                    const likeBtn = document.getElementById('like-btn');
-                    likeBtn.onclick = async () => {
-                        if (!currentUser) return alert('Войдите в аккаунт!');
-                        likeBtn.disabled = true;
-                        likeBtn.style.opacity = '0.7';
-
-                        const heartSpan = document.getElementById('heart-icon');
-                        const countSpan = document.getElementById('like-count');
-                        
-                        heartSpan.classList.add('like-animate');
-                        setTimeout(() => heartSpan.classList.remove('like-animate'), 800);
-
-                        try {
-                            const freshSnap = await getDoc(docRef);
-                            const freshLikes = freshSnap.data().likes || [];
-
-                            if (freshLikes.includes(currentUser.uid)) {
-                                await updateDoc(docRef, { likes: arrayRemove(currentUser.uid) });
-                                heartSpan.innerHTML = '<i class="far fa-heart"></i>';
-                                countSpan.innerText = Math.max(0, freshLikes.length - 1);
-                            } else {
-                                await updateDoc(docRef, { likes: arrayUnion(currentUser.uid) });
-                                heartSpan.innerHTML = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
-                                countSpan.innerText = freshLikes.length + 1;
-                            }
-                        } catch (error) {
-                            console.error("Ошибка лайка:", error);
-                        } finally {
-                            likeBtn.disabled = false;
-                            likeBtn.style.opacity = '1';
-                        }
-                    };
-
-                    document.getElementById('save-btn').onclick = async () => {
-                        if (!currentUser) return alert('Войдите в аккаунт!');
-                        const userRef = doc(db, "users", currentUser.uid);
-                        const saveIconSpan = document.getElementById('save-icon');
-                        
-                        if (isSaved) {
-                            await updateDoc(userRef, { bookmarks: arrayRemove(newsId) });
-                            saveIconSpan.innerHTML = '<i class="far fa-bookmark"></i>';
-                            isSaved = false;
-                        } else {
-                            await updateDoc(userRef, { bookmarks: arrayUnion(newsId) });
-                            saveIconSpan.innerHTML = '<i class="fas fa-bookmark" style="color: var(--accent);"></i>';
-                            isSaved = true;
-                        }
-                    };
-
-                    loadComments();
-
+                // Загружаем сохраненные картинки в поля
+                if (data.gallery && data.gallery.length > 0) {
+                    data.gallery.forEach(url => addGalleryField(url));
                 } else {
-                    articleBox.innerHTML = '<h1>Новость удалена</h1><a href="index.html" class="back-btn">На главную</a>';
+                    addGalleryField(); // пустое поле
                 }
-            } catch (error) { 
-                console.error(error);
-                articleBox.innerHTML = '<h1>Ошибка загрузки</h1>'; 
+            } else {
+                alert("Новость не найдена");
+                window.location.href = 'posts.html';
             }
+        });
+    }
+
+    window.saveNews = async function(status) {
+      const title = document.getElementById('title').value;
+      const text = quill.root.innerHTML;
+      
+      if(!title || quill.getText().trim() === '') return alert("Заполните заголовок и текст!");
+
+      // Собираем все ссылки из полей галереи
+      const galleryInputs = document.querySelectorAll('.gallery-input');
+      const galleryArray = Array.from(galleryInputs).map(input => input.value.trim()).filter(url => url !== '');
+
+      const newsData = {
+        title: title, 
+        tag: document.getElementById('tag').value,
+        image: document.getElementById('image').value || '',
+        description: document.getElementById('description').value || '',
+        text: text, 
+        author: currentUserDisplayName,
+        status: status,
+        gallery: galleryArray // Сохраняем массив картинок
+      };
+
+      try {
+        if (editId) {
+          await updateDoc(doc(db, "news", editId), newsData);
+          alert(status === 'draft' ? "Черновик сохранен!" : "Новость обновлена!");
+        } else {
+          newsData.date = serverTimestamp();
+          newsData.views = 0;
+          await addDoc(collection(db, "news"), newsData);
+          alert(status === 'draft' ? "Черновик создан!" : "Новость опубликована!");
         }
-
-        function loadComments() {
-            const list = document.getElementById('comments-list');
-            const q = query(collection(db, "comments"), where("newsId", "==", newsId), orderBy("date", "desc"));
-            onSnapshot(q, (snapshot) => {
-                list.innerHTML = '';
-                if (snapshot.empty) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Пока нет комментариев.</p>'; return; }
-                
-                snapshot.forEach(docSnap => {
-                    const d = docSnap.data();
-                    let dateStr = d.date && d.date.seconds ? new Date(d.date.seconds * 1000).toLocaleString('ru-RU') : '—';
-                    
-                    const delBtn = (userRole === 'admin' || userRole === 'moderator') 
-                        ? `<button onclick="deleteComment('${docSnap.id}')" class="btn-del-comment"><i class="fas fa-trash"></i> Удалить</button>` 
-                        : '';
-
-                    list.innerHTML += `
-                        <div class="comment-item">
-                            <div class="comment-header">
-                                <span class="comment-author">${escapeHTML(d.author)}</span>
-                                <span>${dateStr}</span>
-                            </div>
-                            <div class="comment-text">${escapeHTML(d.text)}</div>
-                            ${delBtn}
-                        </div>
-                    `;
-                });
-            });
-        }
-
-        window.addComment = async function() {
-            const text = document.getElementById('comment-text').value.trim();
-            if (!text) return alert('Напишите комментарий!');
-            
-            const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-            const authorName = userSnap.exists() && userSnap.data().displayName ? userSnap.data().displayName : currentUser.email.split('@')[0];
-
-            await addDoc(collection(db, "comments"), {
-                newsId: newsId,
-                author: authorName,
-                text: text,
-                date: serverTimestamp(),
-                uid: currentUser.uid
-            });
-            document.getElementById('comment-text').value = '';
-        };
-
-        window.deleteComment = async function(id) {
-            if(confirm('Удалить комментарий?')) {
-                await deleteDoc(doc(db, "comments", id));
-            }
-        };
-
-        loadArticle();
-    </script>
+        window.location.href = 'posts.html';
+      } catch (error) { console.error(error); alert("Ошибка сохранения!"); }
+    };
+  </script>
 </body>
 </html>
