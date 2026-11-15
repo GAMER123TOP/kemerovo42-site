@@ -1,6 +1,6 @@
 import { firebaseConfig } from '../firebase-config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const app = initializeApp(firebaseConfig);
@@ -30,8 +30,12 @@ export function renderSidebar(activePage) {
           <li><a href="create.html" class="${activePage === 'create' ? 'active' : ''}"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
           <li><a href="categories.html" class="${activePage === 'categories' ? 'active' : ''}"><i class="fas fa-tags"></i> Категории</a></li>
           
-          <!-- ВКЛАДКА ПРЕДЛОЖКИ (скрыта по умолчанию) -->
-          <li id="menu-sugg-li" style="display: none;"><a href="suggestions.html" class="${activePage === 'suggestions' ? 'active' : ''}"><i class="fas fa-bullhorn"></i> Предложки</a></li>
+          <li id="menu-sugg-li" style="display: none;">
+              <a href="suggestions.html" class="${activePage === 'suggestions' ? 'active' : ''}" style="display: flex; align-items: center;">
+                  <i class="fas fa-bullhorn"></i> Предложки 
+                  <span id="sugg-count" style="display:none; background: #ef4444; color: white; border-radius: 10px; padding: 2px 8px; font-size: 0.7rem; margin-left: auto;"></span>
+              </a>
+          </li>
           
           <li id="menu-users-li" style="display: none;"><a href="users.html" class="${activePage === 'users' ? 'active' : ''}"><i class="fas fa-users"></i> Пользователи</a></li>
           <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
@@ -66,9 +70,20 @@ export function renderSidebar(activePage) {
         // Показываем вкладки по ролям
         if (isAdmin) {
             document.getElementById('menu-users-li').style.display = 'block';
+        }
+        
+        if (isAdmin || isModerator) {
             document.getElementById('menu-sugg-li').style.display = 'block';
-        } else if (isModerator) {
-            document.getElementById('menu-sugg-li').style.display = 'block';
+            
+            // Считаем новые предложки для уведомления
+            try {
+                const suggSnap = await getDocs(collection(db, "suggestions"));
+                if (suggSnap.size > 0) {
+                    const countSpan = document.getElementById('sugg-count');
+                    countSpan.innerText = suggSnap.size;
+                    countSpan.style.display = 'inline-block';
+                }
+            } catch (e) { console.error("Ошибка подсчета предложек:", e); }
         }
 
         const userSnap = await getDoc(doc(db, "users", user.uid));
