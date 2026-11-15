@@ -57,7 +57,8 @@
             const snapshot = await getDocs(collection(db, "categories"));
             snapshot.forEach(doc => {
                 const cat = doc.data();
-                nav.innerHTML += `<a href="category.html?tag=${encodeURIComponent(cat.name)}">${cat.name}</a>`;
+                const urlParam = cat.slug ? `slug=${cat.slug}` : `slug=${encodeURIComponent(cat.name)}`;
+                nav.innerHTML += `<a href="category.html?${urlParam}">${cat.name}</a>`;
             });
         }
         loadNavCategories();
@@ -68,24 +69,11 @@
         let lastVisible = null;
         let isFirstLoad = true;
 
-        // --- ФУНКЦИЯ ВРЕМЕНИ ---
-        // Переводит время сервера (UTC) в строго UTC+7 (Кемерово)
         function formatDateTime(timestamp) {
             if (!timestamp || !timestamp.seconds) return 'Дата не указана';
-            
-            // Получаем время из базы (в миллисекундах UTC)
             const utcDate = new Date(timestamp.seconds * 1000);
-            
-            // Переводим в Кемерово (UTC+7)
-            // getTime() дает UTC, прибавляем 7 часов
             const kDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
-            
-            // Берем срез даты и времени. Так как браузер думает, что это местное время, 
-            // мы используем toISOString().slice, чтобы не зависеть от настроек компа.
-            const datePart = kDate.toISOString().slice(0, 10).split('-').reverse().join('.');
-            const timePart = kDate.toISOString().slice(11, 16);
-
-            return `${datePart} ${timePart}`;
+            return `${kDate.toISOString().slice(0, 10).split('-').reverse().join('.')} ${kDate.toISOString().slice(11, 16)}`;
         }
 
         function escapeHTML(str) {
