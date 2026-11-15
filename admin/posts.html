@@ -35,7 +35,8 @@
     import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, orderBy, where, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { showToast, showConfirm } from '../ui.js'; // <-- Импорт
 
     renderSidebar('posts');
     const app = initializeApp(firebaseConfig);
@@ -44,7 +45,6 @@
     async function loadAllNews() {
       const tbody = document.getElementById('news-list');
       try {
-        // Загружаем все, КРОМЕ архива
         const snapshot = await getDocs(query(collection(db, "news"), orderBy("date", "desc")));
         tbody.innerHTML = '';
         
@@ -52,7 +52,7 @@
 
         snapshot.forEach(docSnap => {
           const d = docSnap.data();
-          if (d.status === 'archived') return; // Пропускаем архивные
+          if (d.status === 'archived') return; 
 
           hasNews = true;
           const isDraft = d.status === 'draft';
@@ -84,19 +84,18 @@
         }
 
       } catch (e) { 
-        console.error(e);
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Ошибка загрузки</td></tr>'; 
+        showToast('Ошибка загрузки новостей', 'error');
       }
     }
 
-    // Отправка в архив
     window.archiveNews = async function(id) {
-      if(confirm('Отправить новость в архив? Её можно будет восстановить.')) {
+      showConfirm('В архив', 'Отправить новость в архив? Её можно будет восстановить.', async () => {
         try { 
             await updateDoc(doc(db, "news", id), { status: 'archived' }); 
+            showToast('Новость отправлена в архив', 'success');
             loadAllNews(); 
-        } catch (e) { alert('Ошибка архивации'); }
-      }
+        } catch (e) { showToast('Ошибка архивации', 'error'); }
+      }, 'В архив');
     };
     
     loadAllNews();
