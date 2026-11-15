@@ -1,4 +1,3 @@
-// main/header.js
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -17,16 +16,18 @@ export function renderHeader() {
       <header>
         <div class="header-container">
             <div class="logo">
-                <a href="../index.html" style="text-decoration: none; color: white;">
+                <!-- Абсолютный путь к главной -->
+                <a href="/kemerovo42-site/index.html" style="text-decoration: none; color: white;">
                     <h1>КЕМЕРОВО <span>42</span></h1>
                 </a>
                 <p>Официальный новостной портал</p>
             </div>
             
             <div class="auth-buttons" id="auth-buttons" style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
-                <a href="../admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; display: inline-flex;">Войти</a>
-                <a href="../admin/index.html" id="dash-btn" class="btn-outline" style="text-decoration: none; display: none;">Панель управления</a>
-                <a href="../admin/profile.html" id="prof-btn" class="btn-outline" style="text-decoration: none; display: none; align-items: center; gap: 8px; padding: 6px 16px;">
+                <!-- Абсолютные пути к админке -->
+                <a href="/kemerovo42-site/admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; display: inline-flex;">Войти</a>
+                <a href="/kemerovo42-site/admin/index.html" id="dash-btn" class="btn-outline" style="text-decoration: none; display: none;">Панель управления</a>
+                <a href="/kemerovo42-site/admin/profile.html" id="prof-btn" class="btn-outline" style="text-decoration: none; display: none; align-items: center; gap: 8px; padding: 6px 16px;">
                     <img id="header-avatar" src="" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; display: none; background: #ccc;">
                     <span id="header-username">Профиль</span>
                 </a>
@@ -56,7 +57,9 @@ export function renderHeader() {
                     headerAvatar.src = docSnap.data().photoURL;
                     headerAvatar.style.display = 'block';
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.log("Аватарка не загружена", e);
+            }
         } else {
             loginBtn.style.display = 'inline-flex';
             dashBtn.style.display = 'none';
