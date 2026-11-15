@@ -11,7 +11,7 @@ export function renderSidebar(activePage) {
     const container = document.getElementById('sidebar-container');
     if (!container) return;
 
-    // Добавляем стили для кнопки выхода в head (чтобы не дублировать их на каждой странице)
+    // Стили для кнопки выхода
     if (!document.getElementById('sidebar-styles')) {
         const style = document.createElement('style');
         style.id = 'sidebar-styles';
@@ -29,7 +29,6 @@ export function renderSidebar(activePage) {
         document.head.appendChild(style);
     }
 
-    // 1. Вставляем HTML сайдбара
     container.innerHTML = `
       <aside class="sidebar">
         <div class="sidebar-logo">КЕМЕРОВО <span>42</span></div>
@@ -37,6 +36,8 @@ export function renderSidebar(activePage) {
           <li><a href="index.html" class="${activePage === 'dashboard' ? 'active' : ''}"><i class="fas fa-home"></i> Дашборд</a></li>
           <li><a href="posts.html" class="${activePage === 'posts' ? 'active' : ''}"><i class="fas fa-newspaper"></i> Записи (Новости)</a></li>
           <li><a href="create.html" class="${activePage === 'create' ? 'active' : ''}"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
+          <!-- НОВЫЙ ПУНКТ МЕНЮ -->
+          <li><a href="categories.html" class="${activePage === 'categories' ? 'active' : ''}"><i class="fas fa-tags"></i> Категории</a></li>
           <li id="menu-users-li" style="display: none;"><a href="users.html" class="${activePage === 'users' ? 'active' : ''}"><i class="fas fa-users"></i> Пользователи</a></li>
           <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
         </ul>
@@ -53,7 +54,6 @@ export function renderSidebar(activePage) {
       </aside>
     `;
 
-    // 2. Проверяем авторизацию и заполняем данные
     onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = 'login.html'; return; }
         
@@ -73,7 +73,6 @@ export function renderSidebar(activePage) {
         }
     });
 
-    // 3. Функция выхода
     window.logoutAdmin = async function() {
         await signOut(auth);
         window.location.href = 'login.html';
