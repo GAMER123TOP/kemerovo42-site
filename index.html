@@ -56,14 +56,35 @@
         </main>
 
         <aside class="sidebar">
-            <div class="widget">
-                <h3><i class="fas fa-bolt" style="color: var(--accent);"></i> Молния</h3>
-                <ul class="live-feed">
-                    <li><span class="time">14:30</span> Спецназ завершил операцию в офисе.</li>
-                </ul>
+    <!-- Виджет времени и погоды -->
+    <div class="widget">
+        <h3><i class="fas fa-cloud-sun" style="color: var(--accent);"></i> Кемерово</h3>
+        
+        <!-- Время -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div id="kemerovo-time" style="font-family: 'Montserrat', sans-serif; font-size: 2.5rem; font-weight: 800; color: var(--header-bg); line-height: 1.2;">--:--:--</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;" id="kemerovo-date">Загрузка даты...</div>
+        </div>
+
+        <!-- Погода (статичная на сегодня, можно обновлять вручную) -->
+        <div style="background: var(--bg-color); border-radius: 12px; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="fas fa-cloud" style="font-size: 2rem; color: #64748b;"></i>
+                <div>
+                    <div style="font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 1.4rem; line-height: 1.2;">-2°C</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Пасмурно</div>
+                </div>
             </div>
-        </aside>
+            <div style="text-align: right; font-size: 0.8rem; color: var(--text-muted);">
+                <div>Ветер: 2 м/с</div>
+                <div>Влажн.: 74%</div>
+            </div>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 10px;">
+            Прогноз на 15 ноября
+        </div>
     </div>
+</aside>
 
     <footer>
         <p>&copy; 2026 Телепрограмма «Кемерово 42».</p>
