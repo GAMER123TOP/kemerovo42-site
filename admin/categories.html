@@ -11,7 +11,7 @@
 
   <main class="main-content">
     <div class="page-header">
-      <h1 class="page-title">Категории новостей</h1>
+      <h1 class="page-title">Рубрики (Категории)</h1>
     </div>
 
     <div class="card" style="display: flex; gap: 20px; align-items: flex-start;">
@@ -20,7 +20,9 @@
           <thead>
             <tr><th>Название</th><th>Код (для ссылки)</th><th style="text-align: right;">Действия</th></tr>
           </thead>
-          <tbody id="categories-list"><tr><td colspan="3" style="text-align:center;">Загрузка...</td></tr></tbody>
+          <tbody id="categories-list">
+            <tr><td colspan="3" style="text-align:center;">Загрузка...</td></tr>
+          </tbody>
         </table>
       </div>
       
@@ -28,11 +30,11 @@
         <h3 style="margin-bottom: 15px; font-family: 'Montserrat';">Добавить новую</h3>
         <div class="form-group">
           <label>Название (видно на сайте)</label>
-          <input type="text" id="cat-name" class="form-control" placeholder="Например: Спорт">
+          <input type="text" id="cat-name" class="form-control" placeholder="Например: МВД">
         </div>
         <div class="form-group">
           <label>Код (латиницей для URL)</label>
-          <input type="text" id="cat-slug" class="form-control" placeholder="sport">
+          <input type="text" id="cat-slug" class="form-control" placeholder="mvd">
         </div>
         <button onclick="addCategory()" class="btn-create" style="width: 100%;">Добавить</button>
       </div>
@@ -45,38 +47,54 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    renderSidebar('categories');
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    renderSidebar('categories');
+
     async function loadCategories() {
       const tbody = document.getElementById('categories-list');
-      const snapshot = await getDocs(collection(db, "categories"));
-      tbody.innerHTML = '';
-      if (snapshot.empty) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Категорий пока нет</td></tr>'; return; }
-      
-      snapshot.forEach(docSnap => {
-        const d = docSnap.data();
-        tbody.innerHTML += `
-          <tr>
-            <td><div class="row-title">${d.name}</div></td>
-            <td><code>${d.slug}</code></td>
-            <td style="text-align: right;">
-              <button onclick="deleteCategory('${docSnap.id}')" class="btn-icon danger"><i class="fas fa-trash"></i></button>
-            </td>
-          </tr>`;
-      });
+      try {
+        const snapshot = await getDocs(collection(db, "categories"));
+        tbody.innerHTML = '';
+        
+        if (snapshot.empty) { 
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Категорий пока нет. Добавьте первую!</td></tr>'; 
+            return; 
+        }
+        
+        snapshot.forEach(docSnap => {
+          const d = docSnap.data();
+          tbody.innerHTML += `
+            <tr>
+              <td><div class="row-title">${d.name}</div></td>
+              <td><code>${d.slug}</code></td>
+              <td style="text-align: right;">
+                <button onclick="deleteCategory('${docSnap.id}')" class="btn-icon danger"><i class="fas fa-trash"></i></button>
+              </td>
+            </tr>`;
+        });
+      } catch (e) {
+        console.error("Ошибка загрузки категорий:", e);
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">Ошибка загрузки. Проверьте правила Firebase.</td></tr>';
+      }
     }
 
     window.addCategory = async function() {
       const name = document.getElementById('cat-name').value.trim();
       const slug = document.getElementById('cat-slug').value.trim().toLowerCase().replace(/\s+/g, '-');
+      
       if (!name || !slug) return alert("Заполните оба поля!");
       
-      await addDoc(collection(db, "categories"), { name: name, slug: slug });
-      document.getElementById('cat-name').value = '';
-      document.getElementById('cat-slug').value = '';
-      loadCategories();
+      try {
+        await addDoc(collection(db, "categories"), { name: name, slug: slug });
+        document.getElementById('cat-name').value = '';
+        document.getElementById('cat-slug').value = '';
+        loadCategories();
+      } catch (e) {
+        console.error("Ошибка добавления:", e);
+        alert("Ошибка: " + e.message);
+      }
     }
 
     window.deleteCategory = async function(id) {
@@ -85,6 +103,7 @@
         loadCategories();
       }
     }
+
     loadCategories();
   </script>
 </body>
