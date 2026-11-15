@@ -68,7 +68,7 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    // --- ЗАГРУЗКА КАТЕГОРИЙ В SELECT ---
+    // Загрузка категорий в выпадающий список
     async function loadCategoriesToSelect() {
         const tagSelect = document.getElementById('tag');
         const snapshot = await getDocs(collection(db, "categories"));
@@ -88,11 +88,9 @@
     });
 
     let currentUserDisplayName = 'Редакция';
-    let currentUserEmail = '';
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
-      currentUserEmail = user.email;
       const userSnap = await getDoc(doc(db, "users", user.uid));
       if (userSnap.exists()) currentUserDisplayName = userSnap.data().displayName || user.email.split('@')[0];
     });
@@ -104,11 +102,14 @@
 
       try {
         await addDoc(collection(db, "news"), {
-          title: title, tag: document.getElementById('tag').value,
+          title: title, 
+          tag: document.getElementById('tag').value,
           image: document.getElementById('image').value || '',
           description: document.getElementById('description').value || '',
-          text: text, author: currentUserDisplayName,
-          date: serverTimestamp(), views: 0
+          text: text, 
+          author: currentUserDisplayName,
+          date: serverTimestamp(), // Время сервера (UTC)
+          views: 0
         });
         alert("Новость опубликована!");
         window.location.href = 'posts.html';
