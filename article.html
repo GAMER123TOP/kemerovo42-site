@@ -78,292 +78,285 @@
     <button id="scroll-top-btn" title="Наверх"><i class="fas fa-arrow-up"></i></button>
 
     <script type="module">
-        import { renderHeader } from './header.js';
-        import { firebaseConfig } from './firebase-config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, increment, arrayUnion, arrayRemove, collection, addDoc, query, where, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { renderHeader } from './header.js';
+    import { firebaseConfig } from './firebase-config.js';
+    import { showToast, showConfirm } from './ui.js'; // ИМПОРТ
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc, increment, arrayUnion, arrayRemove, collection, addDoc, query, where, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        renderHeader();
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        
-        const newsId = new URLSearchParams(window.location.search).get('id');
-        const articleBox = document.getElementById('article-box');
-        let currentUser = null;
-        let userRole = 'reader';
-        let galleryImages = [];
-        let currentImageIndex = 0;
+    renderHeader();
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    
+    const newsId = new URLSearchParams(window.location.search).get('id');
+    const articleBox = document.getElementById('article-box');
+    let currentUser = null;
+    let userRole = 'reader';
+    let galleryImages = [];
+    let currentImageIndex = 0;
 
-        // Функции для лайтбокса
-        window.openLightbox = function(index) {
-            currentImageIndex = index;
-            const lightbox = document.getElementById('lightbox');
-            const img = document.getElementById('lightbox-img');
+    window.openLightbox = function(index) {
+        currentImageIndex = index;
+        const lightbox = document.getElementById('lightbox');
+        const img = document.getElementById('lightbox-img');
+        img.src = galleryImages[currentImageIndex];
+        document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${galleryImages.length}`;
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    };
+    window.closeLightbox = function() { document.getElementById('lightbox').classList.remove('active'); document.body.style.overflow = 'auto'; };
+    window.changeLightboxImage = function(direction) {
+        currentImageIndex += direction;
+        if (currentImageIndex >= galleryImages.length) currentImageIndex = 0;
+        if (currentImageIndex < 0) currentImageIndex = galleryImages.length - 1;
+        const img = document.getElementById('lightbox-img');
+        img.style.transform = 'scale(0.9)';
+        setTimeout(() => {
             img.src = galleryImages[currentImageIndex];
             document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${galleryImages.length}`;
-            lightbox.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        };
-        window.closeLightbox = function() { document.getElementById('lightbox').classList.remove('active'); document.body.style.overflow = 'auto'; };
-        window.changeLightboxImage = function(direction) {
-            currentImageIndex += direction;
-            if (currentImageIndex >= galleryImages.length) currentImageIndex = 0;
-            if (currentImageIndex < 0) currentImageIndex = galleryImages.length - 1;
-            const img = document.getElementById('lightbox-img');
-            img.style.transform = 'scale(0.9)';
-            setTimeout(() => {
-                img.src = galleryImages[currentImageIndex];
-                document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${galleryImages.length}`;
-                img.style.transform = 'scale(1)';
-            }, 150);
-        };
-        document.addEventListener('keydown', (e) => {
-            const lightbox = document.getElementById('lightbox');
-            if (!lightbox.classList.contains('active')) return;
-            if (e.key === 'Escape') closeLightbox();
-            if (e.key === 'ArrowLeft') changeLightboxImage(-1);
-            if (e.key === 'ArrowRight') changeLightboxImage(1);
+            img.style.transform = 'scale(1)';
+        }, 150);
+    };
+    document.addEventListener('keydown', (e) => {
+        const lightbox = document.getElementById('lightbox');
+        if (!lightbox.classList.contains('active')) return;
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') changeLightboxImage(-1);
+        if (e.key === 'ArrowRight') changeLightboxImage(1);
+    });
+    document.getElementById('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
+
+    const scrollBtn = document.getElementById('scroll-top-btn');
+    window.addEventListener('scroll', () => { if (window.scrollY > 300) scrollBtn.classList.add('show'); else scrollBtn.classList.remove('show'); });
+    scrollBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+    function escapeHTML(str) { if (!str) return ''; return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+    function formatDateTime(timestamp) {
+        if (!timestamp || !timestamp.seconds) return 'Дата не указана';
+        const utcDate = new Date(timestamp.seconds * 1000);
+        const kDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+        return `${kDate.toISOString().slice(0, 10).split('-').reverse().join('.')} ${kDate.toISOString().slice(11, 16)} (Кемерово)`;
+    }
+    window.copyLink = function() {
+        navigator.clipboard.writeText(window.location.href).then(() => { 
+            showToast('Ссылка на статью скопирована!', 'success');
+        }).catch(() => { 
+            prompt('Скопируйте ссылку:', window.location.href); 
         });
-        document.getElementById('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
+    };
 
-        const scrollBtn = document.getElementById('scroll-top-btn');
-        window.addEventListener('scroll', () => { if (window.scrollY > 300) scrollBtn.classList.add('show'); else scrollBtn.classList.remove('show'); });
-        scrollBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-
-        function escapeHTML(str) { if (!str) return ''; return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
-        function formatDateTime(timestamp) {
-            if (!timestamp || !timestamp.seconds) return 'Дата не указана';
-            const utcDate = new Date(timestamp.seconds * 1000);
-            const kDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
-            return `${kDate.toISOString().slice(0, 10).split('-').reverse().join('.')} ${kDate.toISOString().slice(11, 16)} (Кемерово)`;
+    async function loadArticle() {
+        if (!newsId) {
+            articleBox.innerHTML = '<h1>Статья не найдена</h1><a href="index.html" class="back-btn">На главную</a>';
+            return;
         }
-        window.copyLink = function() {
-            navigator.clipboard.writeText(window.location.href).then(() => { alert('Ссылка скопирована!'); }).catch(() => { prompt('Скопируйте ссылку:', window.location.href); });
-        };
 
-        async function loadArticle() {
-            if (!newsId) {
-                articleBox.innerHTML = '<h1>Статья не найдена</h1><a href="index.html" class="back-btn">На главную</a>';
-                return;
-            }
-
-            try {
-                const docRef = doc(db, "news", newsId);
-                const docSnap = await getDoc(docRef);
+        try {
+            const docRef = doc(db, "news", newsId);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const data = docSnap.data();
                 
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    
-                    const viewedKey = `viewed_${newsId}`;
-                    if (!localStorage.getItem(viewedKey)) {
-                        updateDoc(docRef, { views: increment(1) }).catch(() => {});
-                        localStorage.setItem(viewedKey, 'true');
-                    }
+                const viewedKey = `viewed_${newsId}`;
+                if (!localStorage.getItem(viewedKey)) {
+                    updateDoc(docRef, { views: increment(1) }).catch(() => {});
+                    localStorage.setItem(viewedKey, 'true');
+                }
 
-                    let dateStr = formatDateTime(data.date);
-                    const imgSrc = data.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800';
-                    
-                    // --- ЛОГИКА ЛАЙКОВ ---
-                    let likesArray = data.likes || [];
-                    if (likesArray.length < 0) likesArray = []; 
-                    
-                    // Генерируем ID для гостя, если его нет
-                    let guestId = localStorage.getItem('guest_id');
-                    if (!guestId) {
-                        guestId = 'guest_' + Math.random().toString(36).substr(2, 9);
-                        localStorage.setItem('guest_id', guestId);
-                    }
-                    
-                    // Определяем, кто лайкает (авторизованный или гость)
-                    const userId = currentUser ? currentUser.uid : guestId;
-                    const isLiked = likesArray.includes(userId);
-                    
-                    const heartIcon = isLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
-                    const likeBtnText = isLiked ? 'Вам нравится' : 'Нравится';
+                let dateStr = formatDateTime(data.date);
+                const imgSrc = data.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800';
+                
+                let likesArray = data.likes || [];
+                if (likesArray.length < 0) likesArray = []; 
+                
+                let guestId = localStorage.getItem('guest_id');
+                if (!guestId) {
+                    guestId = 'guest_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('guest_id', guestId);
+                }
+                
+                const userId = currentUser ? currentUser.uid : guestId;
+                const isLiked = likesArray.includes(userId);
+                
+                const heartIcon = isLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
+                const likeBtnText = isLiked ? 'Вам нравится' : 'Нравится';
 
-                    // --- ЗАКЛАДКА (через LocalStorage) ---
-                    const hasSaved = localStorage.getItem(`saved_${newsId}`) === 'true';
-                    const saveIcon = hasSaved ? '<i class="fas fa-bookmark" style="color: var(--accent);"></i>' : '<i class="far fa-bookmark"></i>';
+                const hasSaved = localStorage.getItem(`saved_${newsId}`) === 'true';
+                const saveIcon = hasSaved ? '<i class="fas fa-bookmark" style="color: var(--accent);"></i>' : '<i class="far fa-bookmark"></i>';
 
-                    // Галерея
-                    galleryImages = [];
-                    if (data.image) galleryImages.push(data.image);
-                    if (data.gallery) { data.gallery.forEach(url => { if(url) galleryImages.push(url); }); }
+                galleryImages = [];
+                if (data.image) galleryImages.push(data.image);
+                if (data.gallery) { data.gallery.forEach(url => { if(url) galleryImages.push(url); }); }
 
-                    let galleryHTML = '';
-                    if (data.gallery && data.gallery.length > 0) {
-                        galleryHTML = '<div class="gallery-grid">';
-                        data.gallery.forEach((url, index) => {
-                            if(url) {
-                                const lightboxIndex = (data.image ? index + 1 : index);
-                                galleryHTML += `<img src="${escapeHTML(url)}" onclick="openLightbox(${lightboxIndex})" alt="Фото">`;
-                            }
-                        });
-                        galleryHTML += '</div>';
-                    }
-
-                    let tagsArray = data.tags || (data.tag ? [data.tag] : ['НОВОСТЬ']);
-                    let tagsHTML = tagsArray.map(t => `<span class="tag" style="margin-right: 5px;">${escapeHTML(t)}</span>`).join('');
-                    const cleanText = DOMPurify.sanitize(data.text, { ADD_TAGS: ['ul', 'ol', 'li'], ADD_ATTR: ['data-list'] });
-
-                    articleBox.innerHTML = `
-                        <h1 class="article-title">${escapeHTML(data.title)}</h1>
-                        <div class="article-meta">
-                            ${tagsHTML}
-                            <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
-                            <span class="author"><i class="far fa-user"></i> <a href="index.html?author=${encodeURIComponent(data.author)}" class="author-link">${escapeHTML(data.author || 'Редакция')}</a></span>
-                        </div>
-                        <img src="${escapeHTML(imgSrc)}" class="article-image" onclick="openLightbox(0)" style="cursor: pointer;" onerror="this.style.display='none'">
-                        
-                        <div class="article-text">${cleanText}</div>
-                        
-                        ${galleryHTML}
-                        
-                        <div class="action-buttons">
-                            <button id="like-btn" class="like-btn">
-                                <span id="heart-icon">${heartIcon}</span> <span id="like-text">${likeBtnText}</span> (<span id="like-count">${likesArray.length}</span>)
-                            </button>
-                            <button id="save-btn" class="save-btn">
-                                <span id="save-icon">${saveIcon}</span> В закладки
-                            </button>
-                            <button onclick="copyLink()" class="btn-action"><i class="fas fa-share-alt"></i> Поделиться</button>
-                            
-                            <a href="admin/create.html?id=${newsId}" id="btn-edit-link" class="btn-action btn-edit-article" style="display: none;">
-                                <i class="fas fa-edit"></i> Редактировать
-                            </a>
-                        </div>
-
-                        <div class="comments-section">
-                            <h3>Комментарии</h3>
-                            <div id="comments-list">Загрузка...</div>
-                            <div class="comment-form">
-                                <input type="text" id="comment-author" placeholder="Ваше имя (или никнейм)">
-                                <textarea id="comment-text" placeholder="Написать комментарий..."></textarea>
-                                <button onclick="addComment()">Отправить</button>
-                            </div>
-                        </div>
-
-                        <a href="index.html" class="back-btn">← Назад</a>
-                    `;
-
-                    // Обработчик ЛАЙКА (ставить и снимать)
-                    document.getElementById('like-btn').onclick = async () => {
-                        const likeBtn = document.getElementById('like-btn');
-                        likeBtn.disabled = true;
-                        likeBtn.style.opacity = '0.7';
-
-                        const heartSpan = document.getElementById('heart-icon');
-                        const textSpan = document.getElementById('like-text');
-                        const countSpan = document.getElementById('like-count');
-                        
-                        heartSpan.classList.add('like-animate');
-                        setTimeout(() => heartSpan.classList.remove('like-animate'), 800);
-
-                        try {
-                            const freshSnap = await getDoc(docRef);
-                            const freshLikes = freshSnap.data().likes || [];
-
-                            if (freshLikes.includes(userId)) {
-                                // Снимаем лайк
-                                await updateDoc(docRef, { likes: arrayRemove(userId) });
-                                heartSpan.innerHTML = '<i class="far fa-heart"></i>';
-                                textSpan.innerText = 'Нравится';
-                                countSpan.innerText = Math.max(0, freshLikes.length - 1);
-                            } else {
-                                // Ставим лайк
-                                await updateDoc(docRef, { likes: arrayUnion(userId) });
-                                heartSpan.innerHTML = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
-                                textSpan.innerText = 'Вам нравится';
-                                countSpan.innerText = freshLikes.length + 1;
-                            }
-                        } catch (error) {
-                            console.error("Ошибка лайка:", error);
-                        } finally {
-                            likeBtn.disabled = false;
-                            likeBtn.style.opacity = '1';
+                let galleryHTML = '';
+                if (data.gallery && data.gallery.length > 0) {
+                    galleryHTML = '<div class="gallery-grid">';
+                    data.gallery.forEach((url, index) => {
+                        if(url) {
+                            const lightboxIndex = (data.image ? index + 1 : index);
+                            galleryHTML += `<img src="${escapeHTML(url)}" onclick="openLightbox(${lightboxIndex})" alt="Фото">`;
                         }
-                    };
+                    });
+                    galleryHTML += '</div>';
+                }
 
-                    // Обработчик ЗАКЛАДКИ
-                    document.getElementById('save-btn').onclick = async () => {
-                        const saveIconSpan = document.getElementById('save-icon');
-                        if (localStorage.getItem(`saved_${newsId}`) === 'true') {
-                            localStorage.removeItem(`saved_${newsId}`);
-                            saveIconSpan.innerHTML = '<i class="far fa-bookmark"></i>';
+                let tagsArray = data.tags || (data.tag ? [data.tag] : ['НОВОСТЬ']);
+                let tagsHTML = tagsArray.map(t => `<span class="tag" style="margin-right: 5px;">${escapeHTML(t)}</span>`).join('');
+                const cleanText = DOMPurify.sanitize(data.text, { ADD_TAGS: ['ul', 'ol', 'li'], ADD_ATTR: ['data-list'] });
+
+                articleBox.innerHTML = `
+                    <h1 class="article-title">${escapeHTML(data.title)}</h1>
+                    <div class="article-meta">
+                        ${tagsHTML}
+                        <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
+                        <span class="author"><i class="far fa-user"></i> <a href="index.html?author=${encodeURIComponent(data.author)}" class="author-link">${escapeHTML(data.author || 'Редакция')}</a></span>
+                    </div>
+                    <img src="${escapeHTML(imgSrc)}" class="article-image" onclick="openLightbox(0)" style="cursor: pointer;" onerror="this.style.display='none'">
+                    
+                    <div class="article-text">${cleanText}</div>
+                    
+                    ${galleryHTML}
+                    
+                    <div class="action-buttons">
+                        <button id="like-btn" class="like-btn">
+                            <span id="heart-icon">${heartIcon}</span> <span id="like-text">${likeBtnText}</span> (<span id="like-count">${likesArray.length}</span>)
+                        </button>
+                        <button id="save-btn" class="save-btn">
+                            <span id="save-icon">${saveIcon}</span> В закладки
+                        </button>
+                        <button onclick="copyLink()" class="btn-action"><i class="fas fa-share-alt"></i> Поделиться</button>
+                        
+                        <a href="admin/create.html?id=${newsId}" id="btn-edit-link" class="btn-action btn-edit-article" style="display: none;">
+                            <i class="fas fa-edit"></i> Редактировать
+                        </a>
+                    </div>
+
+                    <div class="comments-section">
+                        <h3>Комментарии</h3>
+                        <div id="comments-list">Загрузка...</div>
+                        <div class="comment-form">
+                            <input type="text" id="comment-author" placeholder="Ваше имя (или никнейм)">
+                            <textarea id="comment-text" placeholder="Написать комментарий..."></textarea>
+                            <button onclick="addComment()">Отправить</button>
+                        </div>
+                    </div>
+
+                    <a href="index.html" class="back-btn">← Назад</a>
+                `;
+
+                document.getElementById('like-btn').onclick = async () => {
+                    const likeBtn = document.getElementById('like-btn');
+                    likeBtn.disabled = true;
+                    likeBtn.style.opacity = '0.7';
+
+                    const heartSpan = document.getElementById('heart-icon');
+                    const textSpan = document.getElementById('like-text');
+                    const countSpan = document.getElementById('like-count');
+                    
+                    heartSpan.classList.add('like-animate');
+                    setTimeout(() => heartSpan.classList.remove('like-animate'), 800);
+
+                    try {
+                        const freshSnap = await getDoc(docRef);
+                        const freshLikes = freshSnap.data().likes || [];
+
+                        if (freshLikes.includes(userId)) {
+                            await updateDoc(docRef, { likes: arrayRemove(userId) });
+                            heartSpan.innerHTML = '<i class="far fa-heart"></i>';
+                            textSpan.innerText = 'Нравится';
+                            countSpan.innerText = Math.max(0, freshLikes.length - 1);
                         } else {
-                            localStorage.setItem(`saved_${newsId}`, 'true');
-                            saveIconSpan.innerHTML = '<i class="fas fa-bookmark" style="color: var(--accent);"></i>';
+                            await updateDoc(docRef, { likes: arrayUnion(userId) });
+                            heartSpan.innerHTML = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
+                            textSpan.innerText = 'Вам нравится';
+                            countSpan.innerText = freshLikes.length + 1;
                         }
-                    };
+                    } catch (error) {
+                        showToast('Ошибка при попытке поставить лайк', 'error');
+                    } finally {
+                        likeBtn.disabled = false;
+                        likeBtn.style.opacity = '1';
+                    }
+                };
 
-                    loadComments();
+                document.getElementById('save-btn').onclick = async () => {
+                    const saveIconSpan = document.getElementById('save-icon');
+                    if (localStorage.getItem(`saved_${newsId}`) === 'true') {
+                        localStorage.removeItem(`saved_${newsId}`);
+                        saveIconSpan.innerHTML = '<i class="far fa-bookmark"></i>';
+                    } else {
+                        localStorage.setItem(`saved_${newsId}`, 'true');
+                        saveIconSpan.innerHTML = '<i class="fas fa-bookmark" style="color: var(--accent);"></i>';
+                    }
+                };
 
-                } else {
-                    articleBox.innerHTML = '<h1>Новость удалена</h1><a href="index.html" class="back-btn">На главную</a>';
-                }
-            } catch (error) { console.error(error); articleBox.innerHTML = '<h1>Ошибка загрузки</h1>'; }
-        }
+                loadComments();
 
-        onAuthStateChanged(auth, async (user) => { 
-            currentUser = user; 
-            if (user) {
-                const token = await user.getIdTokenResult();
-                if (token.claims.admin) userRole = 'admin';
-                else if (token.claims.moderator) userRole = 'moderator';
-                else if (token.claims.editor) userRole = 'editor';
-                
-                const editBtn = document.getElementById('btn-edit-link');
-                if (editBtn && (userRole === 'admin' || userRole === 'editor')) {
-                    editBtn.style.display = 'inline-flex';
-                }
+            } else {
+                articleBox.innerHTML = '<h1>Новость удалена</h1><a href="index.html" class="back-btn">На главную</a>';
             }
-        });
+        } catch (error) { console.error(error); articleBox.innerHTML = '<h1>Ошибка загрузки</h1>'; }
+    }
 
-        function loadComments() {
-            const list = document.getElementById('comments-list');
-            if(!list) return;
-            const q = query(collection(db, "comments"), where("newsId", "==", newsId));
-            onSnapshot(q, (snapshot) => {
-                list.innerHTML = '';
-                if (snapshot.empty) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Пока нет комментариев.</p>'; return; }
-                let commentsArray = [];
-                snapshot.forEach(docSnap => { commentsArray.push({ id: docSnap.id, ...docSnap.data() }); });
-                commentsArray.sort((a, b) => (b.date ? b.date.seconds : 0) - (a.date ? a.date.seconds : 0));
-                commentsArray.forEach(d => {
-                    let dateStr = d.date && d.date.seconds ? new Date(d.date.seconds * 1000).toLocaleString('ru-RU') : '—';
-                    const delBtn = (userRole === 'admin' || userRole === 'moderator') ? `<button onclick="deleteComment('${d.id}')" class="btn-del-comment"><i class="fas fa-trash"></i> Удалить</button>` : '';
-                    list.innerHTML += `<div class="comment-item"><div class="comment-header"><span class="comment-author">${escapeHTML(d.author)}</span><span>${dateStr}</span></div><div class="comment-text">${escapeHTML(d.text)}</div>${delBtn}</div>`;
-                });
-            });
+    onAuthStateChanged(auth, async (user) => { 
+        currentUser = user; 
+        if (user) {
+            const token = await user.getIdTokenResult();
+            if (token.claims.admin) userRole = 'admin';
+            else if (token.claims.moderator) userRole = 'moderator';
+            else if (token.claims.editor) userRole = 'editor';
+            
+            const editBtn = document.getElementById('btn-edit-link');
+            if (editBtn && (userRole === 'admin' || userRole === 'editor')) {
+                editBtn.style.display = 'inline-flex';
+            }
         }
+    });
 
-        window.addComment = async function() {
-            const authorInput = document.getElementById('comment-author');
-            const textInput = document.getElementById('comment-text');
-            const author = authorInput.value.trim();
-            const text = textInput.value.trim();
-
-            if (!author) return alert('Пожалуйста, введите ваше имя!');
-            if (!text) return alert('Напишите комментарий!');
-
-            await addDoc(collection(db, "comments"), { 
-                newsId: newsId, 
-                author: author, 
-                text: text, 
-                date: serverTimestamp(), 
-                uid: currentUser ? currentUser.uid : 'guest'
+    function loadComments() {
+        const list = document.getElementById('comments-list');
+        if(!list) return;
+        const q = query(collection(db, "comments"), where("newsId", "==", newsId));
+        onSnapshot(q, (snapshot) => {
+            list.innerHTML = '';
+            if (snapshot.empty) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Пока нет комментариев.</p>'; return; }
+            let commentsArray = [];
+            snapshot.forEach(docSnap => { commentsArray.push({ id: docSnap.id, ...docSnap.data() }); });
+            commentsArray.sort((a, b) => (b.date ? b.date.seconds : 0) - (a.date ? a.date.seconds : 0));
+            commentsArray.forEach(d => {
+                let dateStr = d.date && d.date.seconds ? new Date(d.date.seconds * 1000).toLocaleString('ru-RU') : '—';
+                const delBtn = (userRole === 'admin' || userRole === 'moderator') ? `<button onclick="deleteComment('${d.id}')" class="btn-del-comment"><i class="fas fa-trash"></i> Удалить</button>` : '';
+                list.innerHTML += `<div class="comment-item"><div class="comment-header"><span class="comment-author">${escapeHTML(d.author)}</span><span>${dateStr}</span></div><div class="comment-text">${escapeHTML(d.text)}</div>${delBtn}</div>`;
             });
-            authorInput.value = '';
-            textInput.value = '';
-        };
+        });
+    }
 
-        window.deleteComment = async function(id) {
-            if(confirm('Удалить комментарий?')) await deleteDoc(doc(db, "comments", id));
-        };
+    window.addComment = async function() {
+        const authorInput = document.getElementById('comment-author');
+        const textInput = document.getElementById('comment-text');
+        const author = authorInput.value.trim();
+        const text = textInput.value.trim();
 
-        loadArticle();
-    </script>
-</body>
-</html>
+        if (!author) return showToast('Пожалуйста, введите ваше имя!', 'error');
+        if (!text) return showToast('Напишите комментарий!', 'error');
+
+        await addDoc(collection(db, "comments"), { 
+            newsId: newsId, author: author, text: text, date: serverTimestamp(), uid: currentUser ? currentUser.uid : 'guest'
+        });
+        authorInput.value = '';
+        textInput.value = '';
+        showToast('Комментарий отправлен!', 'success');
+    };
+
+    window.deleteComment = async function(id) {
+        showConfirm('Удалить комментарий', 'Вы уверены, что хотите удалить этот комментарий?', async () => {
+            await deleteDoc(doc(db, "comments", id));
+            showToast('Комментарий удален', 'info');
+        });
+    };
+
+    loadArticle();
+</script>
