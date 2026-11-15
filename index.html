@@ -51,17 +51,6 @@
         renderHeader();
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
-        async function loadNavCategories() {
-            const nav = document.getElementById('main-nav');
-            const snapshot = await getDocs(collection(db, "categories"));
-            snapshot.forEach(doc => {
-                const cat = doc.data();
-                const urlParam = cat.slug ? `slug=${cat.slug}` : `slug=${encodeURIComponent(cat.name)}`;
-                nav.innerHTML += `<a href="category.html?${urlParam}">${cat.name}</a>`;
-            });
-        }
-        loadNavCategories();
 
         const newsContainer = document.getElementById('news-container');
         const loadMoreBtn = document.getElementById('load-more-btn');
