@@ -78,6 +78,12 @@
       document.getElementById('profile-box').style.display = 'block';
       document.getElementById('email').value = user.email;
 
+      // Получаем роль из токена
+      const token = await user.getIdTokenResult();
+      let userRole = 'editor'; 
+      if (token.claims.admin) userRole = 'admin';
+      else if (token.claims.editor) userRole = 'editor';
+
       const snap = await getDoc(doc(db, 'users', user.uid));
       if (snap.exists()) {
         const data = snap.data();
@@ -85,6 +91,14 @@
         if (data.photoURL) {
           document.getElementById('avatar-url').value = data.photoURL;
           document.getElementById('avatar-preview').src = data.photoURL;
+        }
+        
+        // АВТО-СОХРАНЕНИЕ: если в базе нет email или роли, записываем их
+        if (!data.email || !data.role) {
+            await setDoc(doc(db, 'users', currentUid), { 
+                email: user.email, 
+                role: userRole 
+            }, { merge: true });
         }
       }
     });
@@ -97,25 +111,18 @@
       const displayName = document.getElementById('displayName').value.trim();
       const photoURL = document.getElementById('avatar-url').value.trim();
       
-      const userEmail = auth.currentUser.email; 
-
-      // Получаем роль из токена (claims)
       const token = await auth.currentUser.getIdTokenResult();
-      let userRole = 'editor'; 
-      if (token.claims.admin) userRole = 'admin';
-      else if (token.claims.editor) userRole = 'editor';
+      let userRole = token.claims.admin ? 'admin' : 'editor';
 
       try {
         await setDoc(doc(db, 'users', currentUid), { 
           displayName: displayName, 
           photoURL: photoURL,
-          email: userEmail,
+          email: auth.currentUser.email,
           role: userRole
         }, { merge: true });
         alert('Профиль обновлен!');
-      } catch (e) { 
-        alert('Ошибка сохранения: ' + e.message); 
-      }
+      } catch (e) { alert('Ошибка сохранения: ' + e.message); }
     };
 
     window.changePassword = async function() {
