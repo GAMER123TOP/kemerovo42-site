@@ -83,9 +83,15 @@
             return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
 
-        async function loadCategoryNews() {
+                async function loadCategoryNews() {
             try {
-                const q = query(collection(db, "news"), where("tag", "==", categoryName), orderBy("date", "desc"));
+                // Добавляем фильтр status
+                const q = query(
+                    collection(db, "news"), 
+                    where("tag", "==", categoryName),
+                    where("status", "==", "published"),
+                    orderBy("date", "desc")
+                );
                 const snapshot = await getDocs(q);
                 
                 newsContainer.innerHTML = '';
@@ -117,6 +123,7 @@
                 });
             } catch (error) {
                 console.error("Ошибка:", error);
+                // Если вылезет ошибка индекса, Firebase попросит его создать
                 newsContainer.innerHTML = '<p style="text-align: center; color: red; padding: 20px;">Ошибка загрузки. Возможно, требуется создать индекс в Firebase.</p>';
             }
         }
