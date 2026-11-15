@@ -43,7 +43,7 @@
       const errorDiv = document.getElementById('error');
 
       if (!loginVal || !pass) { errorDiv.innerText = "Заполните все поля"; return; }
-      const email = loginVal.includes('@') ? loginVal : `${loginVal}@kemerovo42`;
+      const email = loginVal.includes('@') ? loginVal : `${loginVal}@k42.ru`;
 
       try {
         await signInWithEmailAndPassword(auth, email, pass);
