@@ -7,16 +7,15 @@
   <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    #editor-container { height: 400px; margin-bottom: 20px; background: white; border-radius: 8px; }
+    #editor-container { height: 300px; margin-bottom: 20px; background: white; border-radius: 8px; }
     .ql-toolbar { border-radius: 8px 8px 0 0; border-color: var(--border) !important; }
     .ql-container { border-color: var(--border) !important; border-radius: 0 0 8px 8px; font-family: 'Inter', sans-serif; font-size: 1rem;}
     .btn-draft { background: #e2e8f0; color: #0f172a; margin-left: 10px; }
     .btn-draft:hover { background: #cbd5e1; }
-    .upload-row { display: flex; gap: 10px; align-items: center; }
-    .upload-status { font-size: 0.85rem; color: var(--text-muted); }
     
-    /* Стили для сетки картинок ВНУТРИ редактора */
-    .ql-editor img { max-width: 100%; border-radius: 8px; display: inline-block; margin: 5px; width: calc(33.33% - 10px); vertical-align: top; object-fit: cover; height: 150px; }
+    .gallery-row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .gallery-row input { flex-grow: 1; }
+    .btn-remove-photo { background: #ef4444; color: white; border: none; border-radius: 6px; padding: 0 15px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -41,15 +40,8 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Главная обложка (для карточки на главной)</label>
-          <div class="upload-row">
-            <input type="text" id="image" class="form-control" placeholder="Вставьте ссылку или загрузите файл">
-            <input type="file" id="image-file" accept="image/*" style="display: none;" onchange="uploadCoverToImgur(this)">
-            <button type="button" class="btn-create" style="padding: 10px 15px; margin: 0;" onclick="document.getElementById('image-file').click()">
-              <i class="fas fa-upload"></i> Загрузить
-            </button>
-          </div>
-          <div class="upload-status" id="upload-status"></div>
+          <label>Главная обложка (URL)</label>
+          <input type="text" id="image" class="form-control" placeholder="Ссылка на Imgur">
         </div>
       </div>
 
@@ -59,11 +51,20 @@
       </div>
 
       <div class="form-group">
-        <label>Текст новости (для добавления галереи используйте иконку картинки в панели редактора)</label>
+        <label>Текст новости</label>
         <div id="editor-container"></div>
       </div>
 
-      <div style="display: flex; gap: 10px;">
+      <!-- БЛОК ГАЛЕРЕИ -->
+      <div class="form-group" style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
+        <label style="font-size: 1.1rem; margin-bottom: 10px;">Фотогалерея (доп. фото)</label>
+        <div id="gallery-container"></div>
+        <button type="button" onclick="addGalleryField()" class="btn-create" style="margin-top: 10px; background: #3b82f6; color: white;">
+          <i class="fas fa-plus"></i> Добавить ещё одно фото
+        </button>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
         <button onclick="saveNews('published')" class="btn-create" style="flex: 2; justify-content: center; font-size: 1.1rem; padding: 15px;">
           <i class="fas fa-paper-plane"></i> Опубликовать
         </button>
@@ -87,64 +88,18 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    // ⚠️ ВСТАВЬ СЮДА СВОЙ CLIENT ID ОТ IMGUR
-    const IMGUR_CLIENT_ID = 'ТВОЙ_CLIENT_ID'; 
-
-    // --- ОБРАБОТЧИК КАРТИНОК ДЛЯ QUILL ---
-    function imageHandler() {
-        const input = document.createElement('input');
-        input.setAttribute('type', 'file');
-        input.setAttribute('accept', 'image/*');
-        input.click();
-
-        input.onchange = async () => {
-            const file = input.files[0];
-            if (!file) return;
-
-            const range = quill.getSelection(true);
-            quill.insertText(range.index, '⏳ Загрузка картинки...', 'user');
-            
-            const formData = new FormData();
-            formData.append('image', file);
-
-            try {
-                const response = await fetch('https://api.imgur.com/3/image', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Client-ID ${IMGUR_CLIENT_ID}` },
-                    body: formData
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    quill.deleteText(range.index, 21);
-                    quill.insertEmbed(range.index, 'image', result.data.link);
-                    quill.setSelection(range.index + 1); 
-                } else {
-                    quill.deleteText(range.index, 21);
-                    alert('Ошибка загрузки на Imgur. Проверьте Client ID.');
-                }
-            } catch (error) {
-                quill.deleteText(range.index, 21);
-                alert('Ошибка сети при загрузке');
-            }
-        };
-    }
-
+    // Простой редактор без кастомных кнопок картинок (только текст)
     const quill = new Quill('#editor-container', {
       theme: 'snow', 
       placeholder: 'Начните писать текст...',
       modules: { 
-        toolbar: { 
-            container: [
-                ['bold', 'italic', 'underline'], 
-                [{ 'header': 2 }], 
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
-                ['link'], 
-                ['image'], // Кнопка картинки
-                ['clean'] 
-            ],
-            handlers: { 'image': imageHandler }
-        } 
+        toolbar: [
+            ['bold', 'italic', 'underline'], 
+            [{ 'header': 2 }], 
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
+            ['link'], 
+            ['clean'] 
+        ]
       }
     });
 
@@ -171,6 +126,25 @@
     }
     loadCategoriesToSelect();
 
+    // --- УПРАВЛЕНИЕ ПОЛЯМИ ГАЛЕРЕИ ---
+    function addGalleryField(url = '') {
+        const container = document.getElementById('gallery-container');
+        const row = document.createElement('div');
+        row.className = 'gallery-row';
+        row.innerHTML = `
+            <input type="text" class="form-control gallery-input" placeholder="https://i.imgur.com/..." value="${url}">
+            <button type="button" class="btn-remove-photo" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
+        `;
+        container.appendChild(row);
+    }
+
+    // Делаем функцию глобальной, чтобы работала кнопка в HTML
+    window.addGalleryField = addGalleryField;
+
+    // При загрузке страницы добавляем одно пустое поле (если это новая новость)
+    if (!editId) addGalleryField();
+
+    // Загрузка данных для редактирования
     if (editId) {
         document.getElementById('page-title').innerText = 'Редактирование новости';
         document.querySelector('button[onclick="saveNews(\'published\')"]').innerHTML = '<i class="fas fa-save"></i> Сохранить и опубликовать';
@@ -188,6 +162,13 @@
                 }, 500);
 
                 if (data.text) quill.clipboard.dangerouslyPasteHTML(data.text);
+
+                // Загружаем сохраненные картинки в поля
+                if (data.gallery && data.gallery.length > 0) {
+                    data.gallery.forEach(url => addGalleryField(url));
+                } else {
+                    addGalleryField(); // пустое поле
+                }
             } else {
                 alert("Новость не найдена");
                 window.location.href = 'posts.html';
@@ -195,35 +176,15 @@
         });
     }
 
-    // --- ЗАГРУЗКА ОБЛОЖКИ ---
-    window.uploadCoverToImgur = async function(input) {
-        if (!input.files || input.files.length === 0) return;
-        const file = input.files[0];
-        const statusDiv = document.getElementById('upload-status');
-        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
-        
-        const formData = new FormData();
-        formData.append('image', file);
-
-        try {
-            const response = await fetch('https://api.imgur.com/3/image', {
-                method: 'POST',
-                headers: { 'Authorization': `Client-ID ${IMGUR_CLIENT_ID}` },
-                body: formData
-            });
-            const result = await response.json();
-            if (result.success) {
-                document.getElementById('image').value = result.data.link;
-                statusDiv.innerHTML = '<span style="color: #10b981;"><i class="fas fa-check"></i> Успешно!</span>';
-            } else { statusDiv.innerHTML = '<span style="color: #ef4444;">Ошибка загрузки</span>'; }
-        } catch (error) { statusDiv.innerHTML = '<span style="color: #ef4444;">Ошибка сети</span>'; }
-    };
-
     window.saveNews = async function(status) {
       const title = document.getElementById('title').value;
       const text = quill.root.innerHTML;
       
       if(!title || quill.getText().trim() === '') return alert("Заполните заголовок и текст!");
+
+      // Собираем все ссылки из полей галереи
+      const galleryInputs = document.querySelectorAll('.gallery-input');
+      const galleryArray = Array.from(galleryInputs).map(input => input.value.trim()).filter(url => url !== '');
 
       const newsData = {
         title: title, 
@@ -232,7 +193,8 @@
         description: document.getElementById('description').value || '',
         text: text, 
         author: currentUserDisplayName,
-        status: status
+        status: status,
+        gallery: galleryArray // Сохраняем массив картинок
       };
 
       try {
