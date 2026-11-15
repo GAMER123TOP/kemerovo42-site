@@ -18,12 +18,12 @@
   <div class="login-box">
     <h2>Вход в редакцию</h2>
     <div class="form-group">
-        <label>Логин (например, admin)</label>
-        <input type="text" id="login" class="form-control" placeholder="admin">
+        <label>Логин</label>
+        <input type="text" id="login" class="form-control" placeholder="Логин">
     </div>
     <div class="form-group">
         <label>Пароль</label>
-        <input type="password" id="password" class="form-control" placeholder="••••••••">
+        <input type="password" id="password" class="form-control" placeholder="Пароль">
     </div>
     <button onclick="login()" class="login-btn">Войти</button>
     <div id="error" class="error"></div>
@@ -43,7 +43,7 @@
       const errorDiv = document.getElementById('error');
 
       if (!loginVal || !pass) { errorDiv.innerText = "Заполните все поля"; return; }
-      const email = loginVal.includes('@') ? loginVal : `${loginVal}@kemerovo42.local`;
+      const email = loginVal.includes('@') ? loginVal : `${loginVal}@kemerovo42`;
 
       try {
         await signInWithEmailAndPassword(auth, email, pass);
