@@ -33,7 +33,7 @@ export function renderSidebar(activePage) {
       <aside class="sidebar">
         <div class="sidebar-logo">КЕМЕРОВО <span>42</span></div>
         <ul class="sidebar-menu">
-          <li><a href="index.html" class="${activePage === 'dashboard' ? 'active' : ''}"><i class="fas fa-home"></i> Дашборд</a></li>
+          <li><a href="index.html" class="${activePage === 'dashboard' ? 'active' : ''}"><i class="fas fa-home"></i> Панель управления</a></li>
           <li><a href="posts.html" class="${activePage === 'posts' ? 'active' : ''}"><i class="fas fa-newspaper"></i> Записи (Новости)</a></li>
           <li><a href="create.html" class="${activePage === 'create' ? 'active' : ''}"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
           
