@@ -7,132 +7,67 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-
-  <aside class="sidebar">
-    <div class="sidebar-logo">КЕМЕРОВО <span>42</span></div>
-    <ul class="sidebar-menu">
-      <li><a href="index.html"><i class="fas fa-home"></i> Дашборд</a></li>
-      <li><a href="posts.html"><i class="fas fa-newspaper"></i> Записи (Новости)</a></li>
-      <li><a href="create.html"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
-      <li><a href="users.html" class="active"><i class="fas fa-users"></i> Пользователи</a></li>
-      <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
-    </ul>
-    <div class="sidebar-user">
-      <img id="sb-avatar" src="https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png" alt="Аватар">
-      <div class="sidebar-user-info">
-        <span class="sidebar-user-name" id="sb-name">Загрузка...</span>
-        <span class="sidebar-user-role" id="sb-role">...</span>
-      </div>
-    </div>
-  </aside>
+  <div id="sidebar-container"></div>
 
   <main class="main-content">
-    <div class="page-header">
-      <h1 class="page-title">Пользователи</h1>
-    </div>
-
+    <div class="page-header"><h1 class="page-title">Пользователи</h1></div>
     <div class="card">
       <table class="wp-table">
         <thead>
-          <tr>
-            <th>ФИО</th>
-            <th>Логин</th>
-            <th>Email</th>
-            <th>Роль</th>
-            <th style="text-align: right;">Действия</th>
-          </tr>
+          <tr><th>ФИО</th><th>Логин</th><th>Email</th><th>Роль</th><th style="text-align: right;">Действия</th></tr>
         </thead>
-        <tbody id="users-list">
-          <tr><td colspan="5" style="text-align:center;">Загрузка...</td></tr>
-        </tbody>
+        <tbody id="users-list"><tr><td colspan="5" style="text-align:center;">Загрузка...</td></tr></tbody>
       </table>
     </div>
-    
-    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 15px;">
-      * Внимание: здесь отображаются профили из базы данных. Если вы удалите профиль, аккаунт для входа (в Firebase Auth) останется, но пользователь не сможет сохранять данные.
-    </p>
   </main>
 
   <script type="module">
+    import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    renderSidebar('users');
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
     onAuthStateChanged(auth, async (user) => {
-      if (!user) { window.location.href = 'login.html'; return; }
-      
+      if (!user) return;
       const token = await user.getIdTokenResult();
-      if (!token.claims.admin) {
-          window.location.href = 'index.html';
-          return;
-      }
-      
-      document.getElementById('sb-name').innerText = user.email.split('@')[0];
-      document.getElementById('sb-role').innerText = 'Администратор';
-
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-      if (userSnap.exists() && userSnap.data().photoURL) {
-        document.getElementById('sb-avatar').src = userSnap.data().photoURL;
-      }
-
+      if (!token.claims.admin) { window.location.href = 'index.html'; return; }
       loadUsers();
     });
 
     async function loadUsers() {
       const tbody = document.getElementById('users-list');
-      try {
-        const snapshot = await getDocs(collection(db, "users"));
-        tbody.innerHTML = '';
-        
-        if (snapshot.empty) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Пользователей пока нет</td></tr>';
-          return;
-        }
+      const snapshot = await getDocs(collection(db, "users"));
+      tbody.innerHTML = '';
+      if (snapshot.empty) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Пользователей пока нет</td></tr>'; return; }
 
-        snapshot.forEach(docSnap => {
-          const d = docSnap.data();
-          
-          let roleText = d.role === 'admin' ? 'Администратор' : 'Редактор';
-          let roleColor = d.role === 'admin' ? '#d4af37' : '#3b82f6';
-          
-          // Вытаскиваем логин из email (например, admin@kemerovo42.local -> admin)
-          let loginText = d.email ? d.email.split('@')[0] : 'Неизвестен';
+      snapshot.forEach(docSnap => {
+        const d = docSnap.data();
+        let roleText = d.role === 'admin' ? 'Администратор' : 'Редактор';
+        let roleColor = d.role === 'admin' ? '#d4af37' : '#3b82f6';
+        let loginText = d.email ? d.email.split('@')[0] : 'Неизвестен';
 
-          tbody.innerHTML += `
-            <tr>
-              <td>
-                <div class="row-title">${d.displayName || 'Без ФИО'}</div>
-              </td>
-              <td><strong>${loginText}</strong></td>
-              <td style="color: var(--text-muted);">${d.email || 'Не указан'}</td>
-              <td><span style="color: ${roleColor}; font-weight: 600;">${roleText}</span></td>
-              <td style="text-align: right;">
-                <div class="actions" style="justify-content: flex-end;">
-                  <button onclick="deleteUser('${docSnap.id}')" class="btn-icon danger" title="Удалить профиль"><i class="fas fa-trash"></i></button>
-                </div>
-              </td>
-            </tr>
-          `;
-        });
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Ошибка загрузки</td></tr>';
-      }
+        tbody.innerHTML += `
+          <tr>
+            <td><div class="row-title">${d.displayName || 'Без ФИО'}</div></td>
+            <td><strong>${loginText}</strong></td>
+            <td style="color: var(--text-muted);">${d.email || 'Не указан'}</td>
+            <td><span style="color: ${roleColor}; font-weight: 600;">${roleText}</span></td>
+            <td style="text-align: right;">
+              <button onclick="deleteUser('${docSnap.id}')" class="btn-icon danger"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>`;
+      });
     }
 
     window.deleteUser = async function(id) {
-      if(confirm('Удалить профиль этого пользователя из базы?')) {
-        try {
-          await deleteDoc(doc(db, "users", id));
-          loadUsers();
-        } catch (e) {
-          alert('Ошибка удаления (проверьте права)');
-        }
-      }
+      if(confirm('Удалить профиль?')) { await deleteDoc(doc(db, "users", id)); loadUsers(); }
     };
   </script>
 </body>
