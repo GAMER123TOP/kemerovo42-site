@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Памятка для СМИ | Кемерово 42</title>
+  <link rel="stylesheet" href="admin-style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .guide-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); margin-bottom: 30px; line-height: 1.6; }
+    .guide-card h2 { font-family: 'Montserrat'; font-size: 1.5rem; margin-bottom: 20px; color: var(--sidebar-bg); border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+    .guide-card h3 { font-size: 1.1rem; margin-top: 25px; margin-bottom: 10px; color: var(--text-main); }
+    .guide-card p { margin-bottom: 15px; color: var(--text-muted); }
+    .guide-card ul, .guide-card ol { margin-left: 20px; margin-bottom: 20px; color: var(--text-muted); }
+    .guide-card li { margin-bottom: 8px; }
+    .guide-card code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #ef4444; font-family: monospace; }
+    .alert { background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0; color: #991b1b; font-size: 0.95rem; }
+    .alert-info { background: #eff6ff; border-left: 4px solid #3b82f6; color: #1e3a8a; }
+    .role-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-right: 5px; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Памятка для редакции СМИ</h1>
+    </div>
+
+    <div class="guide-card">
+      <h2>1. Авторизация и доступ</h2>
+      <p>Вход в панель управления осуществляется по логину (Email) и паролю. Если вы забыли пароль, обратитесь к администратору — на бесплатном тарифе Firebase сброс пароля через email не работает.</p>
+      
+      <h3>Роли в системе:</h3>
+      <ul>
+        <li><span class="role-badge" style="background:#d4af37; color:#0f172a;">Администратор</span> — полный доступ. Может создавать/удалять новости, управлять пользователями, категориями, опросами и предложками.</li>
+        <li><span class="role-badge" style="background:#3b82f6; color:white;">Модератор</span> — может удалять комментарии и отклонять предложенные новости.</li>
+        <li><span class="role-badge" style="background:#10b981; color:white;">Редактор</span> — может только писать и редактировать новости (без доступа к управлению сайтом).</li>
+      </ul>
+    </div>
+
+    <div class="guide-card">
+      <h2>2. Как написать новость</h2>
+      <p>Перейдите в раздел <strong>«Добавить новость»</strong> в левом меню.</p>
+      <ul>
+        <li><strong>Заголовок</strong> — должен быть цепляющим. Не пишите слишком длинно, он не влезет в карточку.</li>
+        <li><strong>Рубрика</strong> — выберите из списка (Криминал, Город, О МВД и т.д.).</li>
+        <li><strong>Картинка (URL)</strong> — сюда нужно вставлять <strong>прямую ссылку</strong> на картинку.</li>
+        <li><strong>Краткое описание</strong> — 1-2 предложения, которые видны на главной странице.</li>
+        <li><strong>Текст новости</strong> — основное поле. Используйте редактор для выделения жирным, списков и цитат.</li>
+      </ul>
+      <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> <strong>Черновики:</strong> Если вы не готовы публиковать новость, нажмите кнопку «В черновик». Она не появится на сайте, но сохранится в разделе «Записи». Когда будете готовы — откройте её и нажмите «Опубликовать».
+      </div>
+    </div>
+
+    <div class="guide-card">
+      <h2>3. Где брать картинки (Imgur)</h2>
+      <div class="alert">
+        <i class="fas fa-exclamation-triangle"></i> <strong>ВАЖНО:</strong> Не вставляйте ссылки на картинки из ВКонтакте, с Яндекс.Картинок или со своего рабочего стола (файлы <code>file:///</code>). Сайты блокируют показ своих картинок на сторонних ресурсах, и новость будет с битой картинкой.
+      </div>
+      <p>Мы используем только <strong>Imgur</strong>. Это бесплатный и надежный хостинг картинок.</p>
+      <p><strong>Как это сделать:</strong></p>
+      <ol>
+        <li>Зайдите на сайт <a href="https://imgur.com/" target="_blank" style="color: var(--accent); font-weight: bold;">Imgur.com</a>.</li>
+        <li>Нажмите зеленую кнопку <strong>«New post»</strong> в левом верхнем углу.</li>
+        <li>Перетащите нужную картинку в окно загрузки (или выберите файл с компьютера).</li>
+        <li>После загрузки нажмите на картинку правой кнопкой мыши и выберите <strong>«Копировать адрес изображения»</strong> (или «Копировать ссылку на изображение»).</li>
+        <li>Вставьте эту ссылку в поле «Картинка (URL)» в админке.</li>
+      </ol>
+      <div class="alert alert-info">
+        <i class="fas fa-link"></i> Ссылка должна быть прямой (обычно заканчивается на <code>.jpg</code>, <code>.png</code> или <code>.jpeg</code>). Не используйте ссылки на страницы, где картинка просто отображается в галерее.
+      </div>
+    </div>
+
+    <div class="guide-card">
+      <h2>4. Работа с предложками</h2>
+      <p>Игроки могут присылать новости через кнопку «Предложить» на главной странице. Они попадают во вкладку <strong>«Предложки»</strong>.</p>
+      <ul>
+        <li><strong>Модератор</strong> может прочитать текст и нажать «Отклонить», если это спам или не по теме.</li>
+        <li><strong>Администратор</strong> может нажать «В черновики». Текст автоматически перенесется в новую запись, и её можно будет отредактировать и опубликовать.</li>
+      </ul>
+    </div>
+
+  </main>
+
+  <script type="module">
+    import { renderSidebar } from './sidebar.js';
+    renderSidebar('guide');
+  </script>
+</body>
+</html>
