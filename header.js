@@ -56,7 +56,7 @@ export function renderHeader() {
         }).catch(err => console.error("Ошибка загрузки меню:", err));
     }
 
-    // --- АВТОРИЗАЦИЯ И КНОПКИ ---
+        // --- АВТОРИЗАЦИЯ И КНОПКИ ---
     onAuthStateChanged(auth, async (user) => {
         const loginBtn = document.getElementById('login-btn');
         const dashBtn = document.getElementById('dash-btn');
@@ -72,13 +72,18 @@ export function renderHeader() {
 
             try {
                 const docSnap = await getDoc(doc(db, "users", user.uid));
-                if (docSnap.exists() && docSnap.data().photoURL) {
-                    headerAvatar.src = docSnap.data().photoURL;
-                    headerAvatar.style.display = 'block';
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.photoURL) {
+                        headerAvatar.src = data.photoURL;
+                        headerAvatar.style.display = 'block';
+                    } else if (data.displayName) {
+                        // Генерируем аватарку из инициалов
+                        headerAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName)}&background=0f172a&color=d4af37&bold=true`;
+                        headerAvatar.style.display = 'block';
+                    }
                 }
-            } catch (e) {
-                console.log("Ошибка загрузки аватарки", e);
-            }
+            } catch (e) {}
         } else {
             loginBtn.style.display = 'inline-flex';
             dashBtn.style.display = 'none';
