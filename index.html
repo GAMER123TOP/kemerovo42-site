@@ -46,12 +46,13 @@
         import { renderHeader } from './header.js';
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        // Добавили where для фильтрации черновиков
+        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         renderHeader();
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-
+        
         const newsContainer = document.getElementById('news-container');
         const loadMoreBtn = document.getElementById('load-more-btn');
         const NEWS_PER_PAGE = 10;
@@ -73,9 +74,14 @@
         async function loadNews() {
             try {
                 let q;
-                if (isFirstLoad) q = query(collection(db, "news"), orderBy("date", "desc"), limit(NEWS_PER_PAGE));
-                else if (lastVisible) q = query(collection(db, "news"), orderBy("date", "desc"), startAfter(lastVisible), limit(NEWS_PER_PAGE));
-                else return;
+                // ФИЛЬТР: берем только опубликованные новости (status == 'published')
+                if (isFirstLoad) {
+                    q = query(collection(db, "news"), where("status", "==", "published"), orderBy("date", "desc"), limit(NEWS_PER_PAGE));
+                } else if (lastVisible) {
+                    q = query(collection(db, "news"), where("status", "==", "published"), orderBy("date", "desc"), startAfter(lastVisible), limit(NEWS_PER_PAGE));
+                } else {
+                    return;
+                }
 
                 const snapshot = await getDocs(q);
                 if (snapshot.empty) { 
@@ -131,13 +137,17 @@
                         `;
                     }
                 });
-            } catch (error) { console.error(error); }
+            } catch (error) {
+                console.error("Ошибка загрузки:", error);
+                if (isFirstLoad) newsContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: #e74c3c;">Ошибка загрузки. Возможно, требуется создать индекс в Firebase (F12).</p>';
+            }
         }
 
         async function loadPopular() {
             const list = document.getElementById('popular-list');
             try {
-                const q = query(collection(db, "news"), orderBy("views", "desc"), limit(5));
+                // Топ-5 тоже только среди опубликованных
+                const q = query(collection(db, "news"), where("status", "==", "published"), orderBy("views", "desc"), limit(5));
                 const snapshot = await getDocs(q);
                 list.innerHTML = '';
                 if (snapshot.empty) { list.innerHTML = '<li style="color: var(--text-muted);">Пока нет статистики</li>'; return; }
@@ -151,7 +161,7 @@
                         </li>`;
                     index++;
                 });
-            } catch (e) { list.innerHTML = '<li style="color: #e74c3c;">Ошибка.</li>'; }
+            } catch (e) { list.innerHTML = '<li style="color: #e74c3c;">Ошибка загрузки топа.</li>'; }
         }
 
         window.loadMore = function() { loadNews(); };
