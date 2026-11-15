@@ -215,6 +215,9 @@
                     let tagsArray = data.tags || (data.tag ? [data.tag] : ['НОВОСТЬ']);
                     let tagsHTML = tagsArray.map(t => `<span class="tag" style="margin-right: 5px;">${escapeHTML(t)}</span>`).join('');
 
+                    // ВАЖНО: Добавили ADD_TAGS для списков
+                    const cleanText = DOMPurify.sanitize(data.text, { ADD_TAGS: ['ul', 'ol', 'li'] });
+
                     articleBox.innerHTML = `
                         <h1 class="article-title">${escapeHTML(data.title)}</h1>
                         <div class="article-meta">
@@ -224,7 +227,7 @@
                         </div>
                         <img src="${escapeHTML(imgSrc)}" class="article-image" onclick="openLightbox(0)" style="cursor: pointer;" onerror="this.style.display='none'">
                         
-                        <div class="article-text">${DOMPurify.sanitize(data.text)}</div>
+                        <div class="article-text">${cleanText}</div>
                         
                         ${galleryHTML}
                         
@@ -311,7 +314,6 @@
             }
         }
 
-        // ИСПРАВЛЕННАЯ ФУНКЦИЯ КОММЕНТАРИЕВ (БЕЗ СЛОЖНЫХ ИНДЕКСОВ)
         function loadComments() {
             const list = document.getElementById('comments-list');
             const q = query(collection(db, "comments"), where("newsId", "==", newsId));
