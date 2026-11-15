@@ -29,9 +29,7 @@
           <label>Рубрика</label>
           <select id="tag" class="form-control">
             <option value="Новость">Обычная новость</option>
-            <option value="Криминал">Криминал</option>
-            <option value="Город">Город</option>
-            <option value="О МВД">О МВД</option>
+            <!-- Сюда скрипт добавит категории из базы -->
           </select>
         </div>
         <div class="form-group">
@@ -61,7 +59,7 @@
     import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     renderSidebar('create');
@@ -69,6 +67,20 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+
+    // --- ЗАГРУЗКА КАТЕГОРИЙ В SELECT ---
+    async function loadCategoriesToSelect() {
+        const tagSelect = document.getElementById('tag');
+        const snapshot = await getDocs(collection(db, "categories"));
+        snapshot.forEach(doc => {
+            const cat = doc.data();
+            const option = document.createElement('option');
+            option.value = cat.name;
+            option.textContent = cat.name;
+            tagSelect.appendChild(option);
+        });
+    }
+    loadCategoriesToSelect();
 
     const quill = new Quill('#editor-container', {
       theme: 'snow', placeholder: 'Начните писать текст...',
