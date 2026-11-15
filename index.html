@@ -56,41 +56,42 @@
         </main>
 
         <aside class="sidebar">
-    <!-- Виджет времени и погоды -->
-    <div class="widget">
-        <h3><i class="fas fa-cloud-sun" style="color: var(--accent);"></i> Кемерово</h3>
-        
-        <!-- Время -->
-        <div style="text-align: center; margin-bottom: 20px;">
-            <div id="kemerovo-time" style="font-family: 'Montserrat', sans-serif; font-size: 2.5rem; font-weight: 800; color: var(--header-bg); line-height: 1.2;">--:--:--</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;" id="kemerovo-date">Загрузка даты...</div>
-        </div>
+            <!-- Виджет времени и погоды -->
+            <div class="widget">
+                <h3><i class="fas fa-cloud-sun" style="color: var(--accent);"></i> Кемерово</h3>
+                
+                <!-- Время -->
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div id="kemerovo-time" style="font-family: 'Montserrat', sans-serif; font-size: 2.5rem; font-weight: 800; color: var(--header-bg); line-height: 1.2;">--:--:--</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;" id="kemerovo-date">Загрузка даты...</div>
+                </div>
 
-        <!-- Погода (статичная на сегодня, можно обновлять вручную) -->
-        <div style="background: var(--bg-color); border-radius: 12px; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-cloud" style="font-size: 2rem; color: #64748b;"></i>
-                <div>
-                    <div style="font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 1.4rem; line-height: 1.2;">-2°C</div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted);">Пасмурно</div>
+                <!-- Погода -->
+                <div style="background: var(--bg-color); border-radius: 12px; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-cloud" style="font-size: 2rem; color: #64748b;"></i>
+                        <div>
+                            <div style="font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 1.4rem; line-height: 1.2;">-2°C</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">Пасмурно</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right; font-size: 0.8rem; color: var(--text-muted);">
+                        <div>Ветер: 2 м/с</div>
+                        <div>Влажн.: 74%</div>
+                    </div>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 10px;">
+                    Прогноз на 15 ноября
                 </div>
             </div>
-            <div style="text-align: right; font-size: 0.8rem; color: var(--text-muted);">
-                <div>Ветер: 2 м/с</div>
-                <div>Влажн.: 74%</div>
-            </div>
-        </div>
-        <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 10px;">
-            Прогноз на 15 ноября
-        </div>
+        </aside>
     </div>
-</aside>
 
     <footer>
         <p>&copy; 2026 Телепрограмма «Кемерово 42».</p>
     </footer>
 
-    <!-- Скрипт авторизации и загрузки -->
+    <!-- Скрипт авторизации и загрузки новостей -->
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -122,10 +123,8 @@
                 dashBtn.style.display = 'inline-flex';
                 profBtn.style.display = 'inline-flex';
                 
-                // Выводим логин без домена (например, admin)
                 headerUsername.innerText = user.email.split('@')[0];
 
-                // Загружаем аватарку из профиля Firestore
                 try {
                     const docSnap = await getDoc(doc(db, "users", user.uid));
                     if (docSnap.exists() && docSnap.data().photoURL) {
@@ -175,7 +174,6 @@
                 lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
                 loadMoreBtn.style.display = 'block';
 
-                // При первой загрузке очищаем контейнер и создаем каркас
                 if (isFirstLoad) {
                     newsContainer.innerHTML = '';
                     gridContainer = document.createElement('div');
@@ -197,7 +195,6 @@
                     const imgTag = `<img src="${escapeHTML(imgSrc)}" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=400'">`;
 
                     if (isFirstNews) {
-                        // Первая новость — большая (Hero)
                         const heroHTML = `
                             <a href="article.html?id=${doc.id}" class="hero-news" style="text-decoration: none; color: inherit;">
                                 ${imgTag}
@@ -210,9 +207,8 @@
                             </a>
                         `;
                         newsContainer.innerHTML += heroHTML;
-                        newsContainer.appendChild(gridContainer); // Добавляем сетку после Hero-новости
+                        newsContainer.appendChild(gridContainer);
                     } else {
-                        // Остальные новости — карточки в сетке
                         const cardHTML = `
                             <a href="article.html?id=${doc.id}" class="news-card" style="text-decoration: none; color: inherit;">
                                 ${imgTag}
@@ -238,6 +234,26 @@
 
         window.loadMore = function() { loadNews(); };
         loadNews();
+
+        // --- Часы Кемерово (UTC+7) ---
+        function updateKemerovoTime() {
+            const now = new Date();
+            // Переводим в часовой пояс Кемерово (UTC+7)
+            const kemerovoTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000));
+            
+            const hours = String(kemerovoTime.getHours()).padStart(2, '0');
+            const minutes = String(kemerovoTime.getMinutes()).padStart(2, '0');
+            const seconds = String(kemerovoTime.getSeconds()).padStart(2, '0');
+            const timeEl = document.getElementById('kemerovo-time');
+            if (timeEl) timeEl.textContent = `${hours}:${minutes}:${seconds}`;
+
+            const options = { weekday: 'long', day: 'numeric', month: 'long' };
+            const dateEl = document.getElementById('kemerovo-date');
+            if (dateEl) dateEl.textContent = kemerovoTime.toLocaleDateString('ru-RU', options);
+        }
+
+        updateKemerovoTime();
+        setInterval(updateKemerovoTime, 1000);
     </script>
     <script src="script.js"></script>
 </body>
