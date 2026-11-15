@@ -4,7 +4,8 @@
   <meta charset="utf-8" />
   <title>Добавить новость | Кемерово 42</title>
   <link rel="stylesheet" href="admin-style.css">
-  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <!-- Обновленный CDN Quill (jsDelivr вместо зависающего cdn.quilljs.com) -->
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     #editor-container { height: 300px; margin-bottom: 20px; background: white; border-radius: 8px; }
@@ -60,8 +61,8 @@
       </div>
 
       <div class="form-group">
-        <label>Краткое описание</label>
-        <input type="text" id="description" class="form-control" placeholder="Пара предложений для карточки...">
+        <label>Краткое описание (для карточки на главной)</label>
+        <input type="text" id="description" class="form-control" placeholder="Пара предложений...">
       </div>
 
       <div class="form-group">
@@ -75,11 +76,14 @@
     </div>
   </main>
 
-  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <!-- Обновленный CDN Quill -->
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  
   <script type="module">
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    // Добавили serverTimestamp в импорты
+    import { getFirestore, collection, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const app = initializeApp(firebaseConfig);
@@ -108,6 +112,7 @@
       
       const token = await user.getIdTokenResult();
       const role = token.claims.admin ? 'admin' : (token.claims.editor ? 'editor' : 'journalist');
+      
       document.getElementById('sb-name').innerText = user.email.split('@')[0];
       document.getElementById('sb-role').innerText = role === 'admin' ? 'Администратор' : 'Редактор';
       if (role === 'admin') document.getElementById('menu-users').style.display = 'block';
@@ -132,7 +137,7 @@
           description: document.getElementById('description').value || '',
           text: text,
           author: currentUserEmail.split('@')[0],
-          date: new Date(),
+          date: serverTimestamp(), // <-- ТЕПЕРЬ ДАТА СТАВИТСЯ СЕРВЕРОМ FIREBASE
           views: 0
         });
         
@@ -140,7 +145,7 @@
         window.location.href = 'posts.html';
       } catch (error) {
         console.error(error);
-        alert("Ошибка публикации! У вас есть права редактора?");
+        alert("Ошибка публикации! Проверьте права.");
       }
     };
   </script>
