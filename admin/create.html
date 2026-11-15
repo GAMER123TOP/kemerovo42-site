@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <title>Добавить новость | Кемерово 42</title>
+  <title>Редактор новости | Кемерово 42</title>
   <link rel="stylesheet" href="admin-style.css">
   <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -10,13 +10,17 @@
     #editor-container { height: 300px; margin-bottom: 20px; background: white; border-radius: 8px; }
     .ql-toolbar { border-radius: 8px 8px 0 0; border-color: var(--border) !important; }
     .ql-container { border-color: var(--border) !important; border-radius: 0 0 8px 8px; font-family: 'Inter', sans-serif; font-size: 1rem;}
+    .btn-draft { background: #e2e8f0; color: #0f172a; margin-left: 10px; }
+    .btn-draft:hover { background: #cbd5e1; }
   </style>
 </head>
 <body>
   <div id="sidebar-container"></div>
 
   <main class="main-content">
-    <div class="page-header"><h1 class="page-title">Новая новость</h1></div>
+    <div class="page-header">
+      <h1 class="page-title" id="page-title">Новая новость</h1>
+    </div>
 
     <div class="card">
       <div class="form-group">
@@ -29,7 +33,6 @@
           <label>Рубрика</label>
           <select id="tag" class="form-control">
             <option value="Новость">Обычная новость</option>
-            <!-- Сюда скрипт добавит категории из базы -->
           </select>
         </div>
         <div class="form-group">
@@ -48,9 +51,15 @@
         <div id="editor-container"></div>
       </div>
 
-      <button onclick="publish()" class="btn-create" style="width: 100%; justify-content: center; font-size: 1.1rem; padding: 15px;">
-        <i class="fas fa-paper-plane"></i> Опубликовать
-      </button>
+      <div style="display: flex; gap: 10px;">
+        <!-- Кнопки сохранения -->
+        <button onclick="saveNews('published')" class="btn-create" style="flex: 2; justify-content: center; font-size: 1.1rem; padding: 15px;">
+          <i class="fas fa-paper-plane"></i> Опубликовать
+        </button>
+        <button onclick="saveNews('draft')" class="btn-create btn-draft" style="flex: 1; justify-content: center; font-size: 1.1rem; padding: 15px;">
+          <i class="fas fa-save"></i> В черновик
+        </button>
+      </div>
     </div>
   </main>
 
@@ -59,7 +68,8 @@
     import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    // Добавили getDoc, updateDoc, doc для редактирования
+    import { getFirestore, collection, getDocs, addDoc, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     renderSidebar('create');
@@ -67,6 +77,22 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+
+    const quill = new Quill('#editor-container', {
+      theme: 'snow', placeholder: 'Начните писать текст...',
+      modules: { toolbar: [ ['bold', 'italic', 'underline'], [{ 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['link'], ['clean'] ] }
+    });
+
+    // Получаем ID из URL (если это редактирование)
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('id');
+    let currentUserDisplayName = 'Редакция';
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      if (userSnap.exists()) currentUserDisplayName = userSnap.data().displayName || user.email.split('@')[0];
+    });
 
     // Загрузка категорий в выпадающий список
     async function loadCategoriesToSelect() {
@@ -82,38 +108,66 @@
     }
     loadCategoriesToSelect();
 
-    const quill = new Quill('#editor-container', {
-      theme: 'snow', placeholder: 'Начните писать текст...',
-      modules: { toolbar: [ ['bold', 'italic', 'underline'], [{ 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['link'], ['clean'] ] }
-    });
+    // Если есть ID, загружаем новость для редактирования
+    if (editId) {
+        document.getElementById('page-title').innerText = 'Редактирование новости';
+        document.querySelector('button[onclick="saveNews(\'published\')"]').innerHTML = '<i class="fas fa-save"></i> Сохранить и опубликовать';
+        
+        getDoc(doc(db, "news", editId)).then(docSnap => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('title').value = data.title || '';
+                document.getElementById('image').value = data.image || '';
+                document.getElementById('description').value = data.description || '';
+                
+                // Ждем загрузки категорий, чтобы выбрать нужную
+                setTimeout(() => {
+                    const tagSelect = document.getElementById('tag');
+                    if (data.tag) tagSelect.value = data.tag;
+                }, 500);
 
-    let currentUserDisplayName = 'Редакция';
+                if (data.text) quill.clipboard.dangerouslyPasteHTML(data.text);
+            } else {
+                alert("Новость не найдена");
+                window.location.href = 'posts.html';
+            }
+        });
+    }
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-      if (userSnap.exists()) currentUserDisplayName = userSnap.data().displayName || user.email.split('@')[0];
-    });
-
-    window.publish = async function() {
+    // Функция сохранения (для публикации или черновика)
+    window.saveNews = async function(status) {
       const title = document.getElementById('title').value;
       const text = quill.root.innerHTML;
+      
       if(!title || quill.getText().trim() === '') return alert("Заполните заголовок и текст!");
 
+      const newsData = {
+        title: title, 
+        tag: document.getElementById('tag').value,
+        image: document.getElementById('image').value || '',
+        description: document.getElementById('description').value || '',
+        text: text, 
+        author: currentUserDisplayName,
+        status: status // 'published' или 'draft'
+      };
+
       try {
-        await addDoc(collection(db, "news"), {
-          title: title, 
-          tag: document.getElementById('tag').value,
-          image: document.getElementById('image').value || '',
-          description: document.getElementById('description').value || '',
-          text: text, 
-          author: currentUserDisplayName,
-          date: serverTimestamp(), // Время сервера (UTC)
-          views: 0
-        });
-        alert("Новость опубликована!");
+        if (editId) {
+          // Если редактируем — обновляем существующую запись
+          await updateDoc(doc(db, "news", editId), newsData);
+          alert(status === 'draft' ? "Черновик сохранен!" : "Новость обновлена!");
+        } else {
+          // Если создаем новую — добавляем дату и просмотры
+          newsData.date = serverTimestamp();
+          newsData.views = 0;
+          await addDoc(collection(db, "news"), newsData);
+          alert(status === 'draft' ? "Черновик создан!" : "Новость опубликована!");
+        }
         window.location.href = 'posts.html';
-      } catch (error) { alert("Ошибка публикации!"); }
+      } catch (error) { 
+        console.error(error);
+        alert("Ошибка сохранения!"); 
+      }
     };
   </script>
 </body>
