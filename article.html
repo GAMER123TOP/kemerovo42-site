@@ -8,39 +8,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <style>
-        /* ПРИНУДИТЕЛЬНЫЕ СТИЛИ ДЛЯ КНОПОК (чтобы они точно были видны) */
         .action-buttons { display: flex !important; gap: 10px; margin-top: 30px; flex-wrap: wrap; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 20px; }
         
         .btn-action, .like-btn, .save-btn { 
-            padding: 10px 20px !important; 
-            border-radius: 8px !important; 
-            border: 1px solid #cbd5e1 !important; 
-            background: #f1f5f9 !important; 
-            color: #0f172a !important; 
-            font-weight: 600 !important; 
-            cursor: pointer !important; 
-            display: inline-flex !important; 
-            align-items: center !important; 
-            gap: 8px !important; 
-            text-decoration: none !important; 
-            font-size: 0.9rem !important;
-            font-family: 'Inter', sans-serif !important;
-            transition: 0.2s !important;
+            padding: 10px 20px !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important; 
+            background: #f1f5f9 !important; color: #0f172a !important; font-weight: 600 !important; 
+            cursor: pointer !important; display: inline-flex !important; align-items: center !important; 
+            gap: 8px !important; text-decoration: none !important; font-size: 0.9rem !important;
+            font-family: 'Inter', sans-serif !important; transition: 0.2s !important;
         }
-        
-        .btn-action:hover, .like-btn:hover, .save-btn:hover { 
-            background: #e2e8f0 !important; 
-            border-color: #94a3b8 !important;
-        }
-
-        .btn-edit-article { 
-            background: #3b82f6 !important; 
-            color: white !important; 
-            border-color: #3b82f6 !important; 
-        }
+        .btn-action:hover, .like-btn:hover, .save-btn:hover { background: #e2e8f0 !important; border-color: #94a3b8 !important; }
+        .btn-edit-article { background: #3b82f6 !important; color: white !important; border-color: #3b82f6 !important; }
         .btn-edit-article:hover { background: #2563eb !important; }
 
-        /* Остальные стили */
         .article-text { font-size: 1.1rem; line-height: 1.8; color: var(--text-color); word-wrap: break-word; white-space: normal; margin-bottom: 30px; }
         .article-text p { margin-bottom: 20px; }
         .article-text ol { list-style-type: none !important; padding-left: 20px; margin-bottom: 20px; }
@@ -56,7 +36,8 @@
         .comments-section { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 30px; }
         .comments-section h3 { font-family: 'Montserrat'; margin-bottom: 20px; font-size: 1.3rem; }
         .comment-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; margin-top: 20px; }
-        .comment-form textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; resize: vertical; min-height: 80px; }
+        .comment-form input, .comment-form textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; }
+        .comment-form textarea { resize: vertical; min-height: 80px; }
         .comment-form button { align-self: flex-start; padding: 10px 20px; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
         .comment-item { background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #e2e8f0; }
         .comment-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted); }
@@ -115,7 +96,7 @@
         let galleryImages = [];
         let currentImageIndex = 0;
 
-        // Лайтбокс функции (без изменений)
+        // Лайтбокс функции
         window.openLightbox = function(index) {
             currentImageIndex = index;
             const lightbox = document.getElementById('lightbox');
@@ -162,9 +143,7 @@
             navigator.clipboard.writeText(window.location.href).then(() => { alert('Ссылка скопирована!'); }).catch(() => { prompt('Скопируйте ссылку:', window.location.href); });
         };
 
-        // --- ЗАГРУЗКА СТАТЬИ ---
         async function loadArticle() {
-            console.log("1. Начало загрузки статьи");
             if (!newsId) {
                 articleBox.innerHTML = '<h1>Статья не найдена</h1><a href="index.html" class="back-btn">На главную</a>';
                 return;
@@ -175,7 +154,6 @@
                 const docSnap = await getDoc(docRef);
                 
                 if (docSnap.exists()) {
-                    console.log("2. Статья найдена, формируем HTML");
                     const data = docSnap.data();
                     
                     const viewedKey = `viewed_${newsId}`;
@@ -186,16 +164,18 @@
 
                     let dateStr = formatDateTime(data.date);
                     const imgSrc = data.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800';
+                    
                     let likesArray = data.likes || [];
                     if (likesArray.length < 0) likesArray = []; 
-                    const isLiked = currentUser && likesArray.includes(currentUser.uid);
-                    const heartIcon = isLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
-                    let isSaved = false;
-                    if (currentUser) {
-                        const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-                        if (userSnap.exists() && userSnap.data().bookmarks && userSnap.data().bookmarks.includes(newsId)) isSaved = true;
-                    }
-                    const saveIcon = isSaved ? '<i class="fas fa-bookmark" style="color: var(--accent);"></i>' : '<i class="far fa-bookmark"></i>';
+                    
+                    // ПРОВЕРКА ЛАЙКА БЕЗ АККАУНТА (через LocalStorage)
+                    const hasLiked = localStorage.getItem(`liked_${newsId}`) === 'true';
+                    const heartIcon = hasLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
+                    const likeDisabled = hasLiked ? 'disabled style="opacity:0.7;"' : '';
+
+                    // ПРОВЕРКА ЗАКЛАДКИ БЕЗ АККАУНТА (через LocalStorage)
+                    const hasSaved = localStorage.getItem(`saved_${newsId}`) === 'true';
+                    const saveIcon = hasSaved ? '<i class="fas fa-bookmark" style="color: var(--accent);"></i>' : '<i class="far fa-bookmark"></i>';
 
                     galleryImages = [];
                     if (data.image) galleryImages.push(data.image);
@@ -230,9 +210,8 @@
                         
                         ${galleryHTML}
                         
-                        <!-- Кнопки (всегда на месте) -->
                         <div class="action-buttons">
-                            <button id="like-btn" class="like-btn">
+                            <button id="like-btn" class="like-btn" ${likeDisabled}>
                                 <span id="heart-icon">${heartIcon}</span> Нравится (<span id="like-count">${likesArray.length}</span>)
                             </button>
                             <button id="save-btn" class="save-btn">
@@ -240,7 +219,6 @@
                             </button>
                             <button onclick="copyLink()" class="btn-action"><i class="fas fa-share-alt"></i> Поделиться</button>
                             
-                            <!-- Кнопка Редактировать (скрыта по умолчанию) -->
                             <a href="admin/create.html?id=${newsId}" id="btn-edit-link" class="btn-action btn-edit-article" style="display: none;">
                                 <i class="fas fa-edit"></i> Редактировать
                             </a>
@@ -249,66 +227,55 @@
                         <div class="comments-section">
                             <h3>Комментарии</h3>
                             <div id="comments-list">Загрузка...</div>
-                            ${currentUser ? `<div class="comment-form"><textarea id="comment-text" placeholder="Написать комментарий..."></textarea><button onclick="addComment()">Отправить</button></div>` : `<p style="color: var(--text-muted); font-size: 0.9rem;">Войдите в аккаунт, чтобы оставить комментарий.</p>`}
+                            <div class="comment-form">
+                                <input type="text" id="comment-author" placeholder="Ваше имя (или никнейм)">
+                                <textarea id="comment-text" placeholder="Написать комментарий..."></textarea>
+                                <button onclick="addComment()">Отправить</button>
+                            </div>
                         </div>
 
                         <a href="index.html" class="back-btn">← Назад</a>
                     `;
 
-                    console.log("3. HTML вставлен, вешаем обработчики");
-                    
-                    // Обработчики кнопок
+                    // Лайк без аккаунта
                     document.getElementById('like-btn').onclick = async () => {
-                        if (!currentUser) return alert('Войдите в аккаунт!');
+                        if (localStorage.getItem(`liked_${newsId}`) === 'true') return;
+                        
                         const likeBtn = document.getElementById('like-btn');
                         likeBtn.disabled = true;
                         const heartSpan = document.getElementById('heart-icon');
                         const countSpan = document.getElementById('like-count');
                         heartSpan.classList.add('like-animate');
                         setTimeout(() => heartSpan.classList.remove('like-animate'), 800);
+
                         try {
-                            const freshSnap = await getDoc(docRef);
-                            const freshLikes = freshSnap.data().likes || [];
-                            if (freshLikes.includes(currentUser.uid)) {
-                                await updateDoc(docRef, { likes: arrayRemove(currentUser.uid) });
-                                heartSpan.innerHTML = '<i class="far fa-heart"></i>';
-                                countSpan.innerText = Math.max(0, freshLikes.length - 1);
-                            } else {
-                                await updateDoc(docRef, { likes: arrayUnion(currentUser.uid) });
-                                heartSpan.innerHTML = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
-                                countSpan.innerText = freshLikes.length + 1;
-                            }
-                        } catch (error) {} finally { likeBtn.disabled = false; }
+                            await updateDoc(docRef, { likes: arrayUnion('guest_' + Date.now()) }); // Уникальный ID для гостя
+                            heartSpan.innerHTML = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
+                            countSpan.innerText = parseInt(countSpan.innerText) + 1;
+                            localStorage.setItem(`liked_${newsId}`, 'true');
+                        } catch (error) { console.error(error); }
                     };
 
+                    // Закладка без аккаунта
                     document.getElementById('save-btn').onclick = async () => {
-                        if (!currentUser) return alert('Войдите в аккаунт!');
-                        const userRef = doc(db, "users", currentUser.uid);
                         const saveIconSpan = document.getElementById('save-icon');
-                        if (isSaved) {
-                            await updateDoc(userRef, { bookmarks: arrayRemove(newsId) });
+                        if (localStorage.getItem(`saved_${newsId}`) === 'true') {
+                            localStorage.removeItem(`saved_${newsId}`);
                             saveIconSpan.innerHTML = '<i class="far fa-bookmark"></i>';
-                            isSaved = false;
                         } else {
-                            await updateDoc(userRef, { bookmarks: arrayUnion(newsId) });
+                            localStorage.setItem(`saved_${newsId}`, 'true');
                             saveIconSpan.innerHTML = '<i class="fas fa-bookmark" style="color: var(--accent);"></i>';
-                            isSaved = true;
                         }
                     };
 
                     loadComments();
-                    console.log("4. Комментарии загружаются");
 
                 } else {
                     articleBox.innerHTML = '<h1>Новость удалена</h1><a href="index.html" class="back-btn">На главную</a>';
                 }
-            } catch (error) { 
-                console.error("ОШИБКА:", error);
-                articleBox.innerHTML = '<h1>Ошибка загрузки</h1>'; 
-            }
+            } catch (error) { console.error(error); articleBox.innerHTML = '<h1>Ошибка загрузки</h1>'; }
         }
 
-        // --- ПРОВЕРКА ПОЛЬЗОВАТЕЛЯ (ОТДЕЛЬНО) ---
         onAuthStateChanged(auth, async (user) => { 
             currentUser = user; 
             if (user) {
@@ -317,11 +284,9 @@
                 else if (token.claims.moderator) userRole = 'moderator';
                 else if (token.claims.editor) userRole = 'editor';
                 
-                // Как только узнали роль, показываем кнопку редактирования
                 const editBtn = document.getElementById('btn-edit-link');
                 if (editBtn && (userRole === 'admin' || userRole === 'editor')) {
                     editBtn.style.display = 'inline-flex';
-                    console.log("5. Кнопка редактирования показана");
                 }
             }
         });
@@ -345,12 +310,23 @@
         }
 
         window.addComment = async function() {
-            const text = document.getElementById('comment-text').value.trim();
+            const authorInput = document.getElementById('comment-author');
+            const textInput = document.getElementById('comment-text');
+            const author = authorInput.value.trim();
+            const text = textInput.value.trim();
+
+            if (!author) return alert('Пожалуйста, введите ваше имя!');
             if (!text) return alert('Напишите комментарий!');
-            const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-            const authorName = userSnap.exists() && userSnap.data().displayName ? userSnap.data().displayName : currentUser.email.split('@')[0];
-            await addDoc(collection(db, "comments"), { newsId: newsId, author: authorName, text: text, date: serverTimestamp(), uid: currentUser.uid });
-            document.getElementById('comment-text').value = '';
+
+            await addDoc(collection(db, "comments"), { 
+                newsId: newsId, 
+                author: author, 
+                text: text, 
+                date: serverTimestamp(), 
+                uid: currentUser ? currentUser.uid : 'guest' // Если залогинен, сохраняем ID
+            });
+            authorInput.value = '';
+            textInput.value = '';
         };
 
         window.deleteComment = async function(id) {
