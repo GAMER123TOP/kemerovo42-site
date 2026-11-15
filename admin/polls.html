@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Опросы | Кемерово 42</title>
+  <link rel="stylesheet" href="admin-style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Опросы</h1>
+    </div>
+
+    <div class="card" style="margin-bottom: 30px; background: #f8fafc;">
+      <h3 style="margin-bottom: 15px; font-family: 'Montserrat';">Создать новый опрос</h3>
+      <div class="form-group">
+        <label>Вопрос</label>
+        <input type="text" id="poll-question" class="form-control" placeholder="Например: Как вам новый патч?">
+      </div>
+      <div class="form-group">
+        <label>Варианты ответов (через запятую)</label>
+        <input type="text" id="poll-options" class="form-control" placeholder="Отлично, Нормально, Ужасно">
+      </div>
+      <button onclick="createPoll()" class="btn-create" style="margin-top: 10px;">Создать опрос</button>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom: 15px; font-family: 'Montserrat';">Активные опросы</h3>
+      <div id="polls-list">Загрузка...</div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { renderSidebar } from './sidebar.js';
+    import { firebaseConfig } from '../firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    renderSidebar('polls');
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function loadPolls() {
+      const list = document.getElementById('polls-list');
+      const snapshot = await getDocs(collection(db, "polls"));
+      list.innerHTML = '';
+      
+      if (snapshot.empty) { list.innerHTML = '<p style="color: var(--text-muted);">Опросов пока нет.</p>'; return; }
+
+      snapshot.forEach(docSnap => {
+        const d = docSnap.data();
+        list.innerHTML += `
+          <div style="border-bottom: 1px solid var(--border); padding: 15px 0; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 5px;">${d.question}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Варианты: ${d.options.map(o => o.text).join(', ')}</div>
+            </div>
+            <button onclick="deletePoll('${docSnap.id}')" class="btn-icon danger"><i class="fas fa-trash"></i></button>
+          </div>
+        `;
+      });
+    }
+
+    window.createPoll = async function() {
+      const question = document.getElementById('poll-question').value.trim();
+      const optionsStr = document.getElementById('poll-options').value.trim();
+      
+      if (!question || !optionsStr) return alert('Заполните вопрос и варианты!');
+      
+      const optionsArray = optionsStr.split(',').map(opt => ({
+        text: opt.trim(),
+        votes: 0
+      }));
+
+      await addDoc(collection(db, "polls"), {
+        question: question,
+        options: optionsArray,
+        active: true
+      });
+
+      document.getElementById('poll-question').value = '';
+      document.getElementById('poll-options').value = '';
+      loadPolls();
+    }
+
+    window.deletePoll = async function(id) {
+      if(confirm('Удалить опрос?')) {
+        await deleteDoc(doc(db, "polls", id));
+        loadPolls();
+      }
+    }
+
+    loadPolls();
+  </script>
+</body>
+</html>
