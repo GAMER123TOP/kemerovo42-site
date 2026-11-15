@@ -8,31 +8,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <header>
-        <div class="header-container">
-            <div class="logo">
-                <a href="index.html" style="text-decoration: none; color: white;">
-                    <h1>КЕМЕРОВО <span>42</span></h1>
-                </a>
-            </div>
-            <button id="theme-toggle"><i class="fas fa-moon"></i> Тёмная тема</button>
-        </div>
-    </header>
 
-    <div class="article-container" id="article-box">
-        <p>Загрузка...</p>
-    </div>
+    <div id="header-container"></div>
+
+    <div class="article-container" id="article-box"><p>Загрузка...</p></div>
 
     <script type="module">
+        import { renderHeader } from './main/header.js';
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        renderHeader(); // Рисуем шапку
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const newsId = urlParams.get('id');
+        const newsId = new URLSearchParams(window.location.search).get('id');
         const articleBox = document.getElementById('article-box');
 
         function escapeHTML(str) {
@@ -40,37 +31,24 @@
             return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
 
-        // ФОРМАТИРОВАНИЕ ДАТЫ: Кемерово (UTC+7) и МСК (UTC+3)
         function formatDateTime(timestamp) {
             if (!timestamp || !timestamp.seconds) return 'Дата не указана';
-            
             const date = new Date(timestamp.seconds * 1000);
-            
-            // Кемерово
-            const kemerovoDate = new Date(date.getTime() + (7 * 60 * 60 * 1000));
-            const kDate = kemerovoDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const kTime = kemerovoDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-            
-            // Москва
-            const mskDate = new Date(date.getTime() + (3 * 60 * 60 * 1000));
-            const mTime = mskDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-
-            return `${kDate} ${kTime} <span style="font-size:0.85em; color:#94a3b8; margin-left:5px;">(МСК ${mTime})</span>`;
+            const kD = new Date(date.getTime() + (7 * 60 * 60 * 1000));
+            const mD = new Date(date.getTime() + (3 * 60 * 60 * 1000));
+            return `${kD.toLocaleDateString('ru-RU')} ${kD.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})} <span style="font-size:0.85em; color:#94a3b8; margin-left:5px;">(МСК ${mD.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})})</span>`;
         }
 
         if (!newsId) {
-            articleBox.innerHTML = '<h1>Ошибка: Статья не найдена</h1><a href="index.html" class="back-btn">На главную</a>';
+            articleBox.innerHTML = '<h1>Статья не найдена</h1><a href="index.html" class="back-btn">На главную</a>';
         } else {
             async function loadArticle() {
                 try {
                     const docRef = doc(db, "news", newsId);
                     const docSnap = await getDoc(docRef);
-
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        
                         updateDoc(docRef, { views: increment(1) }).catch(() => {});
-
                         let dateStr = formatDateTime(data.date);
                         const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980';
                         
@@ -88,13 +66,10 @@
                     } else {
                         articleBox.innerHTML = '<h1>Новость удалена</h1><a href="index.html" class="back-btn">На главную</a>';
                     }
-                } catch (error) {
-                    articleBox.innerHTML = '<h1>Ошибка загрузки статьи</h1>';
-                }
+                } catch (error) { articleBox.innerHTML = '<h1>Ошибка загрузки</h1>'; }
             }
             loadArticle();
         }
     </script>
-    <script src="script.js"></script>
 </body>
 </html>
