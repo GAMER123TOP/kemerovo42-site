@@ -10,7 +10,10 @@
   <div id="sidebar-container"></div>
 
   <main class="main-content">
-    <div class="page-header"><h1 class="page-title">Пользователи</h1></div>
+    <div class="page-header">
+      <h1 class="page-title">Пользователи</h1>
+    </div>
+
     <div class="card">
       <table class="wp-table">
         <thead>
@@ -18,6 +21,10 @@
         </thead>
         <tbody id="users-list"><tr><td colspan="5" style="text-align:center;">Загрузка...</td></tr></tbody>
       </table>
+    </div>
+    
+    <div style="background: #fef2f2; border: 1px solid #f87171; padding: 15px; border-radius: 8px; margin-top: 20px; color: #991b1b; font-size: 0.9rem;">
+      <i class="fas fa-exclamation-triangle"></i> <strong>Внимание:</strong> Кнопка «Заблокировать» удаляет профиль из базы данных. Пользователь больше не сможет публиковать новости. Однако его аккаунт для входа (Email) остается в Firebase. Чтобы удалить его полностью, зайдите в <a href="https://console.firebase.google.com/" target="_blank" style="color: #991b1b; font-weight: bold;">Firebase Console → Authentication</a>.
     </div>
   </main>
 
@@ -29,7 +36,6 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     renderSidebar('users');
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
@@ -60,14 +66,17 @@
             <td style="color: var(--text-muted);">${d.email || 'Не указан'}</td>
             <td><span style="color: ${roleColor}; font-weight: 600;">${roleText}</span></td>
             <td style="text-align: right;">
-              <button onclick="deleteUser('${docSnap.id}')" class="btn-icon danger"><i class="fas fa-trash"></i></button>
+              <button onclick="deleteUser('${docSnap.id}')" class="btn-icon danger" title="Удалить профиль"><i class="fas fa-user-slash"></i></button>
             </td>
           </tr>`;
       });
     }
 
     window.deleteUser = async function(id) {
-      if(confirm('Удалить профиль?')) { await deleteDoc(doc(db, "users", id)); loadUsers(); }
+      if(confirm('Заблокировать доступ? Профиль удалится из базы, но аккаунт для входа останется.')) { 
+        await deleteDoc(doc(db, "users", id)); 
+        loadUsers(); 
+      }
     };
   </script>
 </body>
