@@ -1,4 +1,3 @@
-// admin/sidebar.js
 import { firebaseConfig } from '../firebase-config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -11,6 +10,24 @@ const auth = getAuth(app);
 export function renderSidebar(activePage) {
     const container = document.getElementById('sidebar-container');
     if (!container) return;
+
+    // Добавляем стили для кнопки выхода в head (чтобы не дублировать их на каждой странице)
+    if (!document.getElementById('sidebar-styles')) {
+        const style = document.createElement('style');
+        style.id = 'sidebar-styles';
+        style.innerHTML = `
+            .logout-btn { 
+                display: flex; align-items: center; justify-content: center; gap: 8px; 
+                width: 100%; padding: 10px; margin-top: 10px; 
+                background: rgba(239, 68, 68, 0.1); color: #ef4444; 
+                border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; 
+                cursor: pointer; font-weight: 600; font-size: 0.85rem; 
+                transition: 0.2s; 
+            }
+            .logout-btn:hover { background: #ef4444; color: white; }
+        `;
+        document.head.appendChild(style);
+    }
 
     // 1. Вставляем HTML сайдбара
     container.innerHTML = `
