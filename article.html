@@ -8,9 +8,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <style>
-        .reading-time { color: var(--text-muted); font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; }
+        /* Стили для лайков */
         .like-btn { margin-top: 30px; padding: 10px 20px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
         .like-btn:hover { background: #e2e8f0; }
+        
+        /* ЖЕЛЕЗОБЕТОННЫЙ ПЕРЕНОС СТРОК И АБЗАЦЕВ */
+        .article-text { 
+            font-size: 1.1rem; 
+            line-height: 1.8; 
+            color: var(--text-color); 
+            word-wrap: break-word; /* Переносит длинные слова */
+            white-space: normal;   /* Стандартное поведение текста */
+        }
+        .article-text p { margin-bottom: 20px; } /* Отступы между абзацами */
     </style>
 </head>
 <body>
@@ -63,12 +73,6 @@
                         let dateStr = formatDateTime(data.date);
                         const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980';
                         
-                        // Считаем время чтения
-                        const textContent = data.text ? data.text.replace(/<[^>]*>?/gm, '') : ''; 
-                        const words = textContent.trim().split(/\s+/).length;
-                        const readingTime = Math.max(1, Math.ceil(words / 150)); 
-
-                        // Лайки
                         const likesArray = data.likes || [];
                         const isLiked = currentUser && likesArray.includes(currentUser.uid);
                         const heartIcon = isLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
@@ -79,13 +83,12 @@
                                 <span class="tag">${escapeHTML(data.tag || 'НОВОСТЬ')}</span>
                                 <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
                                 <span class="author"><i class="far fa-user"></i> ${escapeHTML(data.author || 'Редакция')}</span>
-                                <span class="reading-time"><i class="fas fa-book-open"></i> ${readingTime} мин. чтения</span>
                             </div>
                             <img src="${escapeHTML(imgSrc)}" class="article-image" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167'">
                             
+                            <!-- Текст новости -->
                             <div class="article-text">${DOMPurify.sanitize(data.text)}</div>
                             
-                            <!-- Кнопка лайка -->
                             <button id="like-btn" class="like-btn">
                                 ${heartIcon} Нравится (<span id="like-count">${likesArray.length}</span>)
                             </button>
@@ -93,7 +96,6 @@
                             <a href="index.html" class="back-btn">← Назад</a>
                         `;
 
-                        // Обработчик клика
                         document.getElementById('like-btn').onclick = async () => {
                             if (!currentUser) return alert('Войдите в аккаунт, чтобы оценивать новости!');
                             
