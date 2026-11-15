@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Архив | Кемерово 42</title>
+  <link rel="stylesheet" href="admin-style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Архив новостей</h1>
+    </div>
+    
+    <p style="margin-bottom: 20px; color: var(--text-muted);">Здесь хранятся удаленные новости. Вы можете восстановить их или удалить навсегда.</p>
+
+    <div class="card">
+      <table class="wp-table">
+        <thead>
+          <tr>
+            <th>Заголовок</th>
+            <th>Рубрика</th>
+            <th>Автор</th>
+            <th style="text-align: right;">Действия</th>
+          </tr>
+        </thead>
+        <tbody id="archive-list"><tr><td colspan="4" style="text-align:center;">Загрузка...</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script type="module">
+    import { renderSidebar } from './sidebar.js';
+    import { firebaseConfig } from '../firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, where, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    renderSidebar('archive');
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function loadArchive() {
+      const tbody = document.getElementById('archive-list');
+      try {
+        // Ищем новости, у которых статус "archived"
+        const q = query(collection(db, "news"), where("status", "==", "archived"));
+        const snapshot = await getDocs(q);
+        
+        tbody.innerHTML = '';
+        if (snapshot.empty) { 
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Архив пуст</td></tr>'; 
+            return; 
+        }
+
+        snapshot.forEach(docSnap => {
+          const d = docSnap.data();
+          tbody.innerHTML += `
+            <tr>
+              <td><div class="row-title" style="text-decoration: line-through; color: #94a3b8;">${d.title}</div></td>
+              <td>${d.tag || 'Новость'}</td>
+              <td>${d.author || 'Редакция'}</td>
+              <td style="text-align: right;">
+                <div class="actions" style="justify-content: flex-end;">
+                  <button onclick="restoreNews('${docSnap.id}')" class="btn-icon" title="Восстановить" style="color: #10b981; border-color: #10b981;"><i class="fas fa-undo"></i></button>
+                  <button onclick="deletePermanently('${docSnap.id}')" class="btn-icon danger" title="Удалить навсегда"><i class="fas fa-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+      } catch (e) { 
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Ошибка загрузки</td></tr>'; 
+      }
+    }
+
+    // Восстановить
+    window.restoreNews = async function(id) {
+      if(confirm('Восстановить эту новость?')) {
+        // Меняем статус на draft (черновик), чтобы можно было проверить и опубликовать
+        await updateDoc(doc(db, "news", id), { status: 'draft' });
+        loadArchive();
+      }
+    };
+
+    // Удалить навсегда
+    window.deletePermanently = async function(id) {
+      if(confirm('Удалить новость НАВСЕГДА? Это действие нельзя отменить.')) {
+        await deleteDoc(doc(db, "news", id));
+        loadArchive();
+      }
+    };
+
+    loadArchive();
+  </script>
+</body>
+</html>
