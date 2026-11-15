@@ -80,7 +80,7 @@
     }
 
     window.deleteCategory = async function(id) {
-      if(confirm('Удалить категорию? (Новости в ней останутся, но перестанут отображаться в меню)')) {
+      if(confirm('Удалить категорию?')) {
         await deleteDoc(doc(db, "categories", id));
         loadCategories();
       }
