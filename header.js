@@ -29,7 +29,6 @@ export function renderHeader() {
                 <a href="/kemerovo42-site/suggest.html" class="btn-outline" style="text-decoration: none; padding: 8px 15px; font-size: 0.85rem;"><i class="fas fa-bullhorn"></i> Предложить</a>
                 <a href="/kemerovo42-site/admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; padding: 8px 15px; font-size: 0.85rem;">Войти</a>
                 
-                <!-- Меню пользователя (скрыто по умолчанию) -->
                 <div id="user-menu" style="display: none; position: relative;">
                     <button onclick="document.getElementById('dropdown').style.display = document.getElementById('dropdown').style.display === 'block' ? 'none' : 'block'" style="background: rgba(255,255,255,0.1); border: none; border-radius: 30px; padding: 4px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: white;">
                         <img id="header-avatar" src="" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
@@ -48,7 +47,6 @@ export function renderHeader() {
       </header>
     `;
 
-    // Эффект матового стекла при скролле
     window.addEventListener('scroll', () => {
         const header = document.getElementById('main-header');
         if (window.scrollY > 50) {
@@ -62,13 +60,10 @@ export function renderHeader() {
         }
     });
 
-    // Закрытие меню при клике вне его
     document.addEventListener('click', (e) => {
         const menu = document.getElementById('user-menu');
         const dropdown = document.getElementById('dropdown');
-        if (menu && !menu.contains(e.target)) {
-            dropdown.style.display = 'none';
-        }
+        if (menu && !menu.contains(e.target)) dropdown.style.display = 'none';
     });
 
     window.logoutUser = async function() {
