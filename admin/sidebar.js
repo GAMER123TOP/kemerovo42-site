@@ -2,7 +2,7 @@ import { firebaseConfig } from '../firebase-config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { showConfirm } from '../ui.js'; // <-- Импорт уведомлений
+import { showConfirm } from '../ui.js';
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -69,13 +69,10 @@ export function renderSidebar(activePage) {
         document.getElementById('sb-name').innerText = user.email.split('@')[0];
         document.getElementById('sb-role').innerText = roleText;
         
-        if (isAdmin) {
-            document.getElementById('menu-users-li').style.display = 'block';
-        }
+        if (isAdmin) document.getElementById('menu-users-li').style.display = 'block';
         
         if (isAdmin || isModerator) {
             document.getElementById('menu-sugg-li').style.display = 'block';
-            
             try {
                 const suggSnap = await getDocs(collection(db, "suggestions"));
                 if (suggSnap.size > 0) {
