@@ -3,69 +3,61 @@
 <head>
   <meta charset="utf-8" />
   <title>Профиль | Кемерово 42</title>
+  <link rel="stylesheet" href="admin-style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    :root { --accent: #d4af37; --bg: #f4f6f9; --card: #ffffff; --text: #2c3e50; --muted: #7f8c8d; }
-    body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; color: var(--text); }
-    
-    .header { background: #0f172a; color: white; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--accent); }
-    .header a { color: var(--accent); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-    
     .profile-container { max-width: 600px; margin: 40px auto; padding: 0 20px; }
-    .card { background: var(--card); padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-    
     .avatar-section { display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; }
     .avatar-preview { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; background: #e2e8f0; border: 4px solid var(--accent); margin-bottom: 15px; }
-    
-    label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-top: 15px; margin-bottom: 5px; }
-    input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 1rem; transition: 0.2s; }
-    input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2); }
-    
-    button { width: 100%; padding: 14px; margin-top: 20px; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: 0.2s; }
-    button:hover { background: #b8962e; transform: translateY(-1px); }
-    
-    .divider { height: 1px; background: #e2e8f0; margin: 30px 0; }
-    .section-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 15px; color: #0f172a; }
+    .btn-save { background: var(--accent); color: var(--sidebar-bg); border: none; padding: 14px; border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; margin-top: 10px;}
+    .btn-save:hover { background: #b8962e; }
+    .btn-pass { background: #3b82f6; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; margin-top: 10px;}
+    .btn-pass:hover { background: #2563eb; }
   </style>
 </head>
-<body>
-  <div class="header">
-    <h2><i class="fas fa-user-circle"></i> Мой профиль</h2>
-    <a href="dashboard.html"><i class="fas fa-arrow-left"></i> В панель</a>
+<body style="display:block; background: var(--admin-bg);">
+
+  <div style="background: var(--sidebar-bg); color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--accent);">
+    <h2 style="font-family: 'Montserrat'; margin:0;"><i class="fas fa-user-circle"></i> Мой профиль</h2>
+    <a href="index.html" style="color: var(--accent); text-decoration: none; font-weight: 600;"><i class="fas fa-arrow-left"></i> В панель</a>
   </div>
 
   <div class="profile-container">
     <div class="card" id="profile-box" style="display:none;">
       
-      <!-- Аватарка -->
       <div class="avatar-section">
         <img id="avatar-preview" class="avatar-preview" src="https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png" alt="Аватар">
-        <label style="margin-top:0; text-align:center;">Ссылка на аватарку (URL)</label>
-        <input type="text" id="avatar-url" placeholder="https://example.com/avatar.jpg" oninput="previewAvatar(this.value)">
+        <div class="form-group" style="width: 100%;">
+            <label>Ссылка на аватарку (URL)</label>
+            <input type="text" id="avatar-url" class="form-control" placeholder="https://example.com/avatar.jpg" oninput="previewAvatar(this.value)">
+        </div>
       </div>
 
-      <div class="divider"></div>
+      <hr style="border:0; border-top: 1px solid var(--border); margin: 20px 0;">
 
-      <!-- Данные -->
-      <div class="section-title">Личные данные</div>
-      <label>Email (Логин, нельзя изменить)</label>
-      <input type="text" id="email" disabled style="background:#f1f5f9; color:#94a3b8;">
+      <div class="form-group">
+          <label>Email (Логин, нельзя изменить)</label>
+          <input type="text" id="email" class="form-control" disabled style="background:#f1f5f9; color:#94a3b8;">
+      </div>
+      <div class="form-group">
+          <label>ФИО (для новостей)</label>
+          <input type="text" id="displayName" class="form-control" placeholder="Иван Петров">
+      </div>
+      <button onclick="saveProfile()" class="btn-save">Сохранить изменения</button>
 
-      <label>ФИО (для новостей)</label>
-      <input type="text" id="displayName" placeholder="Иван Петров">
-      
-      <button onclick="saveProfile()">Сохранить изменения</button>
+      <hr style="border:0; border-top: 1px solid var(--border); margin: 30px 0;">
 
-      <div class="divider"></div>
+      <h3 style="margin-bottom: 15px; font-family: 'Montserrat';">Смена пароля</h3>
+      <div class="form-group">
+          <label>Текущий пароль</label>
+          <input type="password" id="old-pass" class="form-control" placeholder="••••••••">
+      </div>
+      <div class="form-group">
+          <label>Новый пароль</label>
+          <input type="password" id="new-pass" class="form-control" placeholder="••••••••">
+      </div>
+      <button onclick="changePassword()" class="btn-pass">Обновить пароль</button>
 
-      <!-- Пароль -->
-      <div class="section-title">Смена пароля</div>
-      <label>Текущий пароль</label>
-      <input type="password" id="old-pass" placeholder="••••••••">
-      <label>Новый пароль</label>
-      <input type="password" id="new-pass" placeholder="••••••••">
-      <button onclick="changePassword()" style="background: #3b82f6; color: white;">Обновить пароль</button>
     </div>
   </div>
 
@@ -86,7 +78,6 @@
       document.getElementById('profile-box').style.display = 'block';
       document.getElementById('email').value = user.email;
 
-      // Загружаем данные из Firestore
       const snap = await getDoc(doc(db, 'users', user.uid));
       if (snap.exists()) {
         const data = snap.data();
@@ -99,23 +90,16 @@
     });
 
     window.previewAvatar = function(url) {
-      const img = document.getElementById('avatar-preview');
-      img.src = url || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png';
+      document.getElementById('avatar-preview').src = url || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png';
     };
 
     window.saveProfile = async function() {
       const displayName = document.getElementById('displayName').value.trim();
       const photoURL = document.getElementById('avatar-url').value.trim();
-
       try {
-        await setDoc(doc(db, 'users', currentUid), {
-          displayName: displayName,
-          photoURL: photoURL
-        }, { merge: true });
+        await setDoc(doc(db, 'users', currentUid), { displayName, photoURL }, { merge: true });
         alert('Профиль обновлен!');
-      } catch (e) {
-        alert('Ошибка сохранения: ' + e.message);
-      }
+      } catch (e) { alert('Ошибка сохранения: ' + e.message); }
     };
 
     window.changePassword = async function() {
@@ -131,9 +115,7 @@
         alert('Пароль успешно изменен!');
         document.getElementById('old-pass').value = '';
         document.getElementById('new-pass').value = '';
-      } catch (e) {
-        alert('Ошибка: ' + e.message + ' (возможно, неверный старый пароль)');
-      }
+      } catch (e) { alert('Ошибка: ' + e.message); }
     };
   </script>
 </body>
