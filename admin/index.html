@@ -6,39 +6,12 @@
   <link rel="stylesheet" href="admin-style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    .logout-btn {
-        display: flex; align-items: center; justify-content: center; gap: 8px;
-        width: 100%; padding: 10px; margin-top: 10px;
-        background: rgba(239, 68, 68, 0.1); color: #ef4444;
-        border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px;
-        cursor: pointer; font-weight: 600; font-size: 0.85rem;
-        transition: 0.2s;
-    }
+    .logout-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s; }
     .logout-btn:hover { background: #ef4444; color: white; }
   </style>
 </head>
 <body>
-
-  <aside class="sidebar">
-    <div class="sidebar-logo">КЕМЕРОВО <span>42</span></div>
-    <ul class="sidebar-menu">
-      <li><a href="index.html" class="active"><i class="fas fa-home"></i> Дашборд</a></li>
-      <li><a href="posts.html"><i class="fas fa-newspaper"></i> Записи (Новости)</a></li>
-      <li><a href="create.html"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
-      <li><a href="users.html" id="menu-users" style="display: none;"><i class="fas fa-users"></i> Пользователи</a></li>
-      <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
-    </ul>
-    <div class="sidebar-user" style="flex-direction: column; align-items: stretch;">
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
-          <img id="sb-avatar" src="https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png" alt="Аватар">
-          <div class="sidebar-user-info">
-            <span class="sidebar-user-name" id="sb-name">Загрузка...</span>
-            <span class="sidebar-user-role" id="sb-role">...</span>
-          </div>
-      </div>
-      <button onclick="logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Выйти</button>
-    </div>
-  </aside>
+  <div id="sidebar-container"></div>
 
   <main class="main-content">
     <div class="page-header">
@@ -50,12 +23,7 @@
       <h3 style="margin-bottom: 20px; font-family: 'Montserrat';">Последние новости</h3>
       <table class="wp-table">
         <thead>
-          <tr>
-            <th>Заголовок</th>
-            <th>Рубрика</th>
-            <th>Автор</th>
-            <th>Дата</th>
-          </tr>
+          <tr><th>Заголовок</th><th>Рубрика</th><th>Автор</th><th>Дата</th></tr>
         </thead>
         <tbody id="recent-news">
           <tr><td colspan="4" style="text-align:center;">Загрузка...</td></tr>
@@ -65,76 +33,42 @@
   </main>
 
   <script type="module">
+    import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, getDocs, query, orderBy, limit, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    renderSidebar('dashboard');
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
     onAuthStateChanged(auth, async (user) => {
-      if (!user) { window.location.href = 'login.html'; return; }
-      
+      if (!user) return;
       const token = await user.getIdTokenResult();
-      let role = 'editor';
-      if (token.claims.admin) role = 'admin';
-      
-      document.getElementById('sb-name').innerText = user.email.split('@')[0];
-      document.getElementById('sb-role').innerText = role === 'admin' ? 'Администратор' : 'Редактор';
-      
-      if (role === 'admin') {
-        document.getElementById('menu-users').style.display = 'block';
-      }
+      let role = token.claims.admin ? 'admin' : 'editor';
 
-      // АВТО-ПОЧИНКА БАЗЫ: проверяем, есть ли email и роль в базе, и записываем, если нет
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
       
-      if (!userSnap.exists()) {
-          // Если профиля вообще нет — создаем
-          await setDoc(userRef, { email: user.email, role: role, displayName: user.email.split('@')[0] });
-      } else {
-          const data = userSnap.data();
-          if (data.photoURL) document.getElementById('sb-avatar').src = data.photoURL;
-          
-          // Если полей нет — добавляем их
-          if (!data.email || !data.role) {
-              await setDoc(userRef, { email: user.email, role: role }, { merge: true });
-          }
-      }
-
+      if (!userSnap.exists()) await setDoc(userRef, { email: user.email, role: role, displayName: user.email.split('@')[0] });
+      else if (!userSnap.data().email || !userSnap.data().role) await setDoc(userRef, { email: user.email, role: role }, { merge: true });
+      
       loadRecentNews();
     });
-
-    window.logout = async function() {
-      await signOut(auth);
-      window.location.href = 'login.html';
-    }
 
     async function loadRecentNews() {
       const tbody = document.getElementById('recent-news');
       const q = query(collection(db, "news"), orderBy("date", "desc"), limit(5));
       const snapshot = await getDocs(q);
-
       tbody.innerHTML = '';
-      if (snapshot.empty) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Новостей пока нет</td></tr>';
-        return;
-      }
-
+      if (snapshot.empty) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Новостей пока нет</td></tr>'; return; }
       snapshot.forEach(doc => {
         const d = doc.data();
         let dateStr = d.date && d.date.seconds ? new Date(d.date.seconds * 1000).toLocaleDateString('ru-RU') : '—';
-        tbody.innerHTML += `
-          <tr>
-            <td><strong>${d.title}</strong></td>
-            <td>${d.tag || 'Новость'}</td>
-            <td>${d.author || 'Редакция'}</td>
-            <td>${dateStr}</td>
-          </tr>
-        `;
+        tbody.innerHTML += `<tr><td><strong>${d.title}</strong></td><td>${d.tag || 'Новость'}</td><td>${d.author || 'Редакция'}</td><td>${dateStr}</td></tr>`;
       });
     }
   </script>
