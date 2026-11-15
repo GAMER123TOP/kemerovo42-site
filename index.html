@@ -29,7 +29,12 @@
             <div class="auth-buttons" id="auth-buttons">
                 <a href="./admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Войти</a>
                 <a href="./admin/dashboard.html" id="dash-btn" class="btn-outline" style="text-decoration: none; display: none; margin-right: 10px;">Панель управления</a>
-                <a href="./admin/profile.html" id="prof-btn" class="btn-outline" style="text-decoration: none; display: none;">Мой профиль</a>
+                
+                <!-- Кнопка профиля с аватаркой -->
+                <a href="./admin/profile.html" id="prof-btn" class="btn-outline" style="text-decoration: none; display: none; align-items: center; gap: 8px; padding-left: 6px;">
+                    <img id="header-avatar" src="" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; display: none; background: #ccc;">
+                    <span id="header-username">Профиль</span>
+                </a>
             </div>
             <button id="theme-toggle"><i class="fas fa-moon"></i> Тёмная тема</button>
         </div>
@@ -46,13 +51,13 @@
         <main class="main-content">
             <div id="news-container"><p style="text-align: center; padding: 20px;">Загрузка новостей...</p></div>
             <div style="text-align: center; margin-top: 20px;">
-                <button id="load-more-btn" onclick="loadMore()" style="display: none; padding: 10px 20px; background: #d4af37; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Показать еще</button>
+                <button id="load-more-btn" onclick="loadMore()" style="display: none; padding: 12px 24px; background: var(--accent); border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s;">Показать еще</button>
             </div>
         </main>
 
         <aside class="sidebar">
             <div class="widget">
-                <h3><i class="fas fa-bolt" style="color: #d4af37;"></i> Молния</h3>
+                <h3><i class="fas fa-bolt" style="color: var(--accent);"></i> Молния</h3>
                 <ul class="live-feed">
                     <li><span class="time">14:30</span> Спецназ завершил операцию в офисе.</li>
                 </ul>
@@ -68,7 +73,7 @@
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const app = initializeApp(firebaseConfig);
@@ -83,16 +88,32 @@
         let isFirstLoad = true;
         let gridContainer = null;
 
-        // --- Проверка авторизации (Шапка сайта) ---
-        onAuthStateChanged(auth, (user) => {
+        // --- Проверка авторизации и вывод аватарки ---
+        onAuthStateChanged(auth, async (user) => {
             const loginBtn = document.getElementById('login-btn');
             const dashBtn = document.getElementById('dash-btn');
             const profBtn = document.getElementById('prof-btn');
+            const headerAvatar = document.getElementById('header-avatar');
+            const headerUsername = document.getElementById('header-username');
 
             if (user) {
                 loginBtn.style.display = 'none';
                 dashBtn.style.display = 'inline-flex';
                 profBtn.style.display = 'inline-flex';
+                
+                // Выводим логин без домена (например, admin)
+                headerUsername.innerText = user.email.split('@')[0];
+
+                // Загружаем аватарку из профиля Firestore
+                try {
+                    const docSnap = await getDoc(doc(db, "users", user.uid));
+                    if (docSnap.exists() && docSnap.data().photoURL) {
+                        headerAvatar.src = docSnap.data().photoURL;
+                        headerAvatar.style.display = 'block';
+                    }
+                } catch (e) {
+                    console.log("Аватарка не загружена", e);
+                }
             } else {
                 loginBtn.style.display = 'inline-flex';
                 dashBtn.style.display = 'none';
@@ -136,17 +157,14 @@
                 // При первой загрузке очищаем контейнер и создаем каркас
                 if (isFirstLoad) {
                     newsContainer.innerHTML = '';
-                    
-                    // Создаем контейнер для сетки новостей (он понадобится, если новостей больше 1)
                     gridContainer = document.createElement('div');
                     gridContainer.className = 'news-grid';
-                    
                     isFirstLoad = false;
                 }
 
                 let isFirstNews = (lastVisible === querySnapshot.docs[querySnapshot.docs.length - 1] && newsContainer.innerHTML === '');
 
-                querySnapshot.forEach((doc, index) => {
+                querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     
                     let dateStr = 'Дата не указана';
@@ -190,7 +208,6 @@
 
             } catch (error) {
                 console.error("Ошибка:", error);
-                // Если это первая загрузка и произошла ошибка — показываем сообщение
                 if (isFirstLoad) {
                     newsContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: #e74c3c;">Не удалось загрузить новости. Попробуйте позже.</p>';
                     loadMoreBtn.style.display = 'none';
