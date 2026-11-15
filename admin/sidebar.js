@@ -12,23 +12,9 @@ export function renderSidebar(activePage) {
     const container = document.getElementById('sidebar-container');
     if (!container) return;
 
-    // Загружаем тему
-    const currentTheme = localStorage.getItem('admin_theme');
-    if (currentTheme === 'dark') {
-        document.body.classList.add('dark-theme');
-    }
-
-    if (!document.getElementById('sidebar-styles')) {
-        const style = document.createElement('style');
-        style.id = 'sidebar-styles';
-        style.innerHTML = `
-            .logout-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s; }
-            .logout-btn:hover { background: #ef4444; color: white; }
-            .theme-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(255,255,255,0.05); color: var(--sidebar-text); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s; }
-            .theme-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-        `;
-        document.head.appendChild(style);
-    }
+    // Проверяем сохраненную тему
+    const isDark = localStorage.getItem('admin_theme') === 'dark';
+    if (isDark) document.body.classList.add('dark-theme');
 
     container.innerHTML = `
       <aside class="sidebar">
@@ -59,17 +45,23 @@ export function renderSidebar(activePage) {
                 <span class="sidebar-user-role" id="sb-role">...</span>
               </div>
           </div>
+          
           <!-- Кнопка смены темы -->
-          <button onclick="toggleAdminTheme()" class="theme-btn"><i class="fas fa-moon"></i> Сменить тему</button>
-          <button onclick="handleLogout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Выйти</button>
+          <button id="theme-toggle-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
+            <i class="fas ${isDark ? 'fa-sun' : 'fa-moon'}"></i> ${isDark ? 'Светлая тема' : 'Тёмная тема'}
+          </button>
+
+          <button onclick="handleLogout()" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
+            <i class="fas fa-sign-out-alt"></i> Выйти
+          </button>
         </div>
       </aside>
     `;
 
-    // Логика смены темы
-    window.toggleAdminTheme = function() {
+    // Привязываем событие клика к кнопке темы
+    document.getElementById('theme-toggle-btn').addEventListener('click', () => {
         const body = document.body;
-        const btn = document.querySelector('.theme-btn');
+        const btn = document.getElementById('theme-toggle-btn');
         
         body.classList.toggle('dark-theme');
         
@@ -80,15 +72,7 @@ export function renderSidebar(activePage) {
             localStorage.setItem('admin_theme', 'light');
             btn.innerHTML = '<i class="fas fa-moon"></i> Тёмная тема';
         }
-    };
-
-    // Устанавливаем правильный текст на кнопке при загрузке
-    if (currentTheme === 'dark') {
-        setTimeout(() => {
-            const btn = document.querySelector('.theme-btn');
-            if (btn) btn.innerHTML = '<i class="fas fa-sun"></i> Светлая тема';
-        }, 50);
-    }
+    });
 
     onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = 'login.html'; return; }
