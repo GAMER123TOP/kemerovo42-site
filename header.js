@@ -1,6 +1,6 @@
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const app = initializeApp(firebaseConfig);
@@ -11,12 +11,10 @@ export function renderHeader() {
     const container = document.getElementById('header-container');
     if (!container) return;
 
-    // 1. Вставляем HTML шапки
     container.innerHTML = `
       <header>
         <div class="header-container">
             <div class="logo">
-                <!-- Абсолютный путь к главной -->
                 <a href="/kemerovo42-site/index.html" style="text-decoration: none; color: white;">
                     <h1>КЕМЕРОВО <span>42</span></h1>
                 </a>
@@ -24,7 +22,6 @@ export function renderHeader() {
             </div>
             
             <div class="auth-buttons" id="auth-buttons" style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
-                <!-- Абсолютные пути к админке -->
                 <a href="/kemerovo42-site/admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; display: inline-flex;">Войти</a>
                 <a href="/kemerovo42-site/admin/index.html" id="dash-btn" class="btn-outline" style="text-decoration: none; display: none;">Панель управления</a>
                 <a href="/kemerovo42-site/admin/profile.html" id="prof-btn" class="btn-outline" style="text-decoration: none; display: none; align-items: center; gap: 8px; padding: 6px 16px;">
@@ -37,7 +34,20 @@ export function renderHeader() {
       </header>
     `;
 
-    // 2. Логика авторизации (кнопки)
+    // --- ЗАГРУЗКА МЕНЮ ---
+    const nav = document.getElementById('main-nav');
+    if (nav) {
+        getDocs(collection(db, "categories")).then(snapshot => {
+            snapshot.forEach(doc => {
+                const cat = doc.data();
+                // Используем slug для URL, чтобы не было кракозябр
+                const urlParam = cat.slug ? `slug=${cat.slug}` : `slug=${encodeURIComponent(cat.name)}`;
+                nav.innerHTML += `<a href="category.html?${urlParam}">${cat.name}</a>`;
+            });
+        });
+    }
+
+    // --- АВТОРИЗАЦИЯ ---
     onAuthStateChanged(auth, async (user) => {
         const loginBtn = document.getElementById('login-btn');
         const dashBtn = document.getElementById('dash-btn');
@@ -57,9 +67,7 @@ export function renderHeader() {
                     headerAvatar.src = docSnap.data().photoURL;
                     headerAvatar.style.display = 'block';
                 }
-            } catch (e) {
-                console.log("Аватарка не загружена", e);
-            }
+            } catch (e) {}
         } else {
             loginBtn.style.display = 'inline-flex';
             dashBtn.style.display = 'none';
@@ -67,16 +75,14 @@ export function renderHeader() {
         }
     });
 
-    // 3. Логика переключения темы
+    // --- ТЕМА ---
     const toggleBtn = document.getElementById('theme-toggle');
     const body = document.body;
     const currentTheme = localStorage.getItem('theme');
-    
     if (currentTheme === 'dark') {
         body.classList.add('dark-theme');
         if(toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-sun"></i> Светлая тема';
     }
-
     if(toggleBtn) {
         toggleBtn.addEventListener('click', () => {
             body.classList.toggle('dark-theme');
