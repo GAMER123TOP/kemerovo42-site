@@ -51,17 +51,6 @@
         const categorySlug = urlParams.get('slug');
         let categoryName = '';
 
-        async function loadNavCategories() {
-            const nav = document.getElementById('main-nav');
-            const snapshot = await getDocs(collection(db, "categories"));
-            snapshot.forEach(doc => {
-                const cat = doc.data();
-                const urlParam = cat.slug ? `slug=${cat.slug}` : `slug=${encodeURIComponent(cat.name)}`;
-                nav.innerHTML += `<a href="category.html?${urlParam}" ${cat.slug === categorySlug ? 'class="active"' : ''}>${cat.name}</a>`;
-            });
-        }
-        loadNavCategories();
-
         // Находим русское название категории по её slug
         async function findCategoryName() {
             const snapshot = await getDocs(collection(db, "categories"));
