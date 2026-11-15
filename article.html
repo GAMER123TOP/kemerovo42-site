@@ -108,8 +108,10 @@
                     let dateStr = formatDateTime(data.date);
                     const imgSrc = data.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800';
                     
-                    // Берем массив лайков из базы (или пустой массив)
+                    // --- ЛАЙКИ ---
                     let likesArray = data.likes || [];
+                    // Если счетчик в базе ушел в минус из-за старого бага, сбрасываем его
+                    if (likesArray.length < 0) likesArray = []; 
                     const isLiked = currentUser && likesArray.includes(currentUser.uid);
                     const heartIcon = isLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
 
@@ -161,12 +163,12 @@
                         <a href="index.html" class="back-btn">← Назад</a>
                     `;
 
-                    // --- ЛАЙК (С ЗАЩИТОЙ ОТ СПАМА) ---
+                    // --- ЛАЙК (ПОЛНОСТЬЮ ПЕРЕПИСАН) ---
                     const likeBtn = document.getElementById('like-btn');
                     likeBtn.onclick = async () => {
                         if (!currentUser) return alert('Войдите в аккаунт!');
                         
-                        // Блокируем кнопку
+                        // Блокируем кнопку, чтобы не было спама
                         likeBtn.disabled = true;
                         likeBtn.style.opacity = '0.7';
 
@@ -178,18 +180,20 @@
                         setTimeout(() => heartSpan.classList.remove('like-animate'), 800);
 
                         try {
-                            if (likesArray.includes(currentUser.uid)) {
-                                // Снимаем лайк
+                            // Проверяем актуальный список лайков прямо сейчас
+                            const freshSnap = await getDoc(docRef);
+                            const freshLikes = freshSnap.data().likes || [];
+
+                            if (freshLikes.includes(currentUser.uid)) {
+                                // Если лайк уже есть — снимаем
                                 await updateDoc(docRef, { likes: arrayRemove(currentUser.uid) });
-                                countSpan.innerText = parseInt(countSpan.innerText) - 1;
                                 heartSpan.innerHTML = '<i class="far fa-heart"></i>';
-                                likesArray = likesArray.filter(id => id !== currentUser.uid); 
+                                countSpan.innerText = Math.max(0, freshLikes.length - 1);
                             } else {
-                                // Ставим лайк
+                                // Если лайка нет — ставим
                                 await updateDoc(docRef, { likes: arrayUnion(currentUser.uid) });
-                                countSpan.innerText = parseInt(countSpan.innerText) + 1;
                                 heartSpan.innerHTML = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
-                                likesArray.push(currentUser.uid);
+                                countSpan.innerText = freshLikes.length + 1;
                             }
                         } catch (error) {
                             console.error("Ошибка лайка:", error);
