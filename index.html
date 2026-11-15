@@ -155,7 +155,7 @@
                 list.innerHTML = '';
                 
                 if (snapshot.empty) { 
-                    list.innerHTML = '<li style="color: var(--text-muted);">Пока нет статистики (или новостей нет)</li>'; 
+                    list.innerHTML = '<li style="color: var(--text-muted); font-size: 0.9rem;">Пока нет просмотров</li>'; 
                     return; 
                 }
                 
@@ -170,8 +170,8 @@
                     index++;
                 });
             } catch (e) { 
-                console.error("ПОДРОБНАЯ ОШИБКА ТОПА:", e); // Это выведет ошибку в консоль
-                list.innerHTML = '<li style="color: #e74c3c; font-size: 0.8rem;">Ошибка загрузки топа (F12)</li>'; 
+                // Если индекса нет, просто пишем "Нет данных", а не красную ошибку
+                list.innerHTML = '<li style="color: var(--text-muted); font-size: 0.9rem;">Нет данных</li>'; 
             }
         }
 
