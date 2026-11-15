@@ -56,24 +56,15 @@ export function renderSidebar(activePage) {
       </aside>
     `;
 
-    onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = 'login.html'; return; }
-        
-        const token = await user.getIdTokenResult();
-        const role = token.claims.admin ? 'admin' : (token.claims.editor ? 'editor' : 'journalist');
-        
-        document.getElementById('sb-name').innerText = user.email.split('@')[0];
-        document.getElementById('sb-role').innerText = role === 'admin' ? 'Администратор' : 'Редактор';
-        
-        if (role === 'admin') {
-            document.getElementById('menu-users-li').style.display = 'block';
+            const userSnap = await getDoc(doc(db, "users", user.uid));
+        if (userSnap.exists()) {
+            const data = userSnap.data();
+            if (data.photoURL) {
+                document.getElementById('sb-avatar').src = data.photoURL;
+            } else if (data.displayName) {
+                document.getElementById('sb-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName)}&background=0f172a&color=d4af37&bold=true`;
+            }
         }
-
-        const userSnap = await getDoc(doc(db, "users", user.uid));
-        if (userSnap.exists() && userSnap.data().photoURL) {
-            document.getElementById('sb-avatar').src = userSnap.data().photoURL;
-        }
-    });
 
     window.logoutAdmin = async function() {
         await signOut(auth);
