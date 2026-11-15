@@ -36,10 +36,9 @@ export function renderSidebar(activePage) {
                   <span id="sugg-count" style="display:none; background: #ef4444; color: white; border-radius: 10px; padding: 2px 8px; font-size: 0.7rem; margin-left: auto;"></span>
               </a>
           </li>
-          
           <li id="menu-users-li" style="display: none;"><a href="users.html" class="${activePage === 'users' ? 'active' : ''}"><i class="fas fa-users"></i> Пользователи</a></li>
-          <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
           <li><a href="guide.html" class="${activePage === 'guide' ? 'active' : ''}"><i class="fas fa-book"></i> Памятка для СМИ</a></li>
+          <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
         </ul>
         <div class="sidebar-user" style="flex-direction: column; align-items: stretch;">
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
