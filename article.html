@@ -11,11 +11,43 @@
         .like-btn, .save-btn { margin-top: 20px; padding: 10px 20px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; user-select: none; margin-right: 10px; }
         .like-btn:hover, .save-btn:hover { background: #e2e8f0; }
         
-        /* Стили для текста статьи и списков */
+        /* Стили для текста статьи */
         .article-text { font-size: 1.1rem; line-height: 1.8; color: var(--text-color); word-wrap: break-word; white-space: normal; margin-bottom: 30px; }
         .article-text p { margin-bottom: 20px; }
-        .article-text ul, .article-text ol { margin-left: 25px; margin-bottom: 20px; }
-        .article-text li { margin-bottom: 8px; }
+        
+        /* ЖЕСТКИЙ ФИКС ДЛЯ СПИСКОВ */
+        .article-text ol {
+            list-style-type: none !important;
+            padding-left: 20px;
+            margin-bottom: 20px;
+        }
+        .article-text li {
+            position: relative;
+            margin-bottom: 8px;
+            padding-left: 20px;
+        }
+        /* Рисуем точку, если редактор сохранил "bullet" */
+        .article-text li[data-list="bullet"]::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--text-color);
+            font-weight: bold;
+            font-size: 1.2em;
+            line-height: 1;
+        }
+        /* Рисуем цифры, если редактор сохранил "ordered" */
+        .article-text li[data-list="ordered"] {
+            list-style-type: decimal !important;
+            padding-left: 0;
+        }
+        .article-text li[data-list="ordered"]::before {
+            content: none;
+        }
+        /* Скрываем пустой span от Quill, чтобы он не сбивал отступы */
+        .article-text .ql-ui {
+            display: none;
+        }
         
         .author-link { color: var(--text-color); text-decoration: none; font-weight: 600; transition: 0.2s; }
         .author-link:hover { color: var(--accent); }
@@ -215,8 +247,8 @@
                     let tagsArray = data.tags || (data.tag ? [data.tag] : ['НОВОСТЬ']);
                     let tagsHTML = tagsArray.map(t => `<span class="tag" style="margin-right: 5px;">${escapeHTML(t)}</span>`).join('');
 
-                    // ВАЖНО: Добавили ADD_TAGS для списков
-                    const cleanText = DOMPurify.sanitize(data.text, { ADD_TAGS: ['ul', 'ol', 'li'] });
+                    // ВАЖНО: Разрешаем сохранять атрибут data-list
+                    const cleanText = DOMPurify.sanitize(data.text, { ADD_TAGS: ['ul', 'ol', 'li'], ADD_ATTR: ['data-list'] });
 
                     articleBox.innerHTML = `
                         <h1 class="article-title">${escapeHTML(data.title)}</h1>
