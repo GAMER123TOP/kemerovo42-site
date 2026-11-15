@@ -22,6 +22,9 @@ export function renderHeader() {
             </div>
             
             <div class="auth-buttons" id="auth-buttons" style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
+                <a href="/kemerovo42-site/suggest.html" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-bullhorn"></i> Предложить
+                </a>
                 <a href="/kemerovo42-site/admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; display: inline-flex;">Войти</a>
                 <a href="/kemerovo42-site/admin/index.html" id="dash-btn" class="btn-outline" style="text-decoration: none; display: none;">Панель управления</a>
                 <a href="/kemerovo42-site/admin/profile.html" id="prof-btn" class="btn-outline" style="text-decoration: none; display: none; align-items: center; gap: 8px; padding: 6px 16px;">
@@ -70,7 +73,6 @@ export function renderHeader() {
                         headerAvatar.src = data.photoURL;
                         headerAvatar.style.display = 'block';
                     } else if (data.displayName) {
-                        // Генерируем аватарку из инициалов
                         headerAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName)}&background=0f172a&color=d4af37&bold=true`;
                         headerAvatar.style.display = 'block';
                     }
