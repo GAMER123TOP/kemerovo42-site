@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Предложки | Кемерово 42</title>
+  <link rel="stylesheet" href="admin-style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .suggestion-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 15px; }
+    .suggestion-card h4 { font-family: 'Montserrat'; font-size: 1.1rem; margin-bottom: 8px; }
+    .suggestion-card .meta { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px; }
+    .suggestion-card .text { font-size: 0.95rem; line-height: 1.5; margin-bottom: 20px; white-space: pre-wrap; }
+    .actions-row { display: flex; gap: 10px; }
+    .btn-publish-sugg { background: #dcfce7; color: #166534; padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; }
+    .btn-publish-sugg:hover { background: #bbf7d0; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Предложенные новости</h1>
+    </div>
+
+    <div id="suggestions-list">
+        <p style="text-align: center; padding: 20px;">Загрузка...</p>
+    </div>
+  </main>
+
+  <script type="module">
+    import { renderSidebar } from './sidebar.js';
+    import { firebaseConfig } from '../firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, orderBy, deleteDoc, doc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    renderSidebar('suggestions');
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    let userRole = 'journalist';
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      const token = await user.getIdTokenResult();
+      userRole = token.claims.admin ? 'admin' : (token.claims.moderator ? 'moderator' : 'editor');
+      loadSuggestions();
+    });
+
+    async function loadSuggestions() {
+      const list = document.getElementById('suggestions-list');
+      try {
+        const q = query(collection(db, "suggestions"), orderBy("date", "desc"));
+        const snapshot = await getDocs(q);
+        list.innerHTML = '';
+        
+        if (snapshot.empty) { 
+            list.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Нет новых предложений.</p>'; 
+            return; 
+        }
+
+        snapshot.forEach(docSnap => {
+          const d = docSnap.data();
+          let dateStr = d.date && d.date.seconds ? new Date(d.date.seconds * 1000).toLocaleString('ru-RU') : '—';
+          
+          const publishBtn = userRole === 'admin' 
+            ? `<button onclick="publishSuggestion('${d.title.replace(/'/g, "\\'")}', '${d.text.replace(/'/g, "\\'").replace(/\n/g, "\\n")}', '${docSnap.id}')" class="btn-publish-sugg"><i class="fas fa-check"></i> В черновики</button>` 
+            : '';
+
+          list.innerHTML += `
+            <div class="suggestion-card">
+                <h4>${d.title}</h4>
+                <div class="meta">От: <strong>${d.author}</strong> | ${dateStr}</div>
+                <div class="text">${d.text}</div>
+                <div class="actions-row">
+                    <button onclick="deleteSuggestion('${docSnap.id}')" class="btn-icon danger" title="Отклонить"><i class="fas fa-trash"></i> Отклонить</button>
+                    ${publishBtn}
+                </div>
+            </div>
+          `;
+        });
+      } catch (e) {
+        console.error(e);
+        list.innerHTML = '<p style="text-align: center; color: red;">Ошибка загрузки.</p>';
+      }
+    }
+
+    window.deleteSuggestion = async function(id) {
+      if(confirm('Удалить эту предложку?')) {
+        await deleteDoc(doc(db, "suggestions", id));
+        loadSuggestions();
+      }
+    }
+
+    window.publishSuggestion = async function(title, text, id) {
+      if(confirm('Перенести эту новость в черновики?')) {
+        await addDoc(collection(db, "news"), {
+            title: title,
+            text: `<p>${text.replace(/\n/g, '</p><p>')}</p>`,
+            description: text.substring(0, 100) + '...',
+            tag: 'Новость',
+            status: 'draft',
+            author: 'Редакция (из предложки)',
+            date: serverTimestamp(),
+            views: 0
+        });
+        await deleteDoc(doc(db, "suggestions", id));
+        alert("Новость добавлена в черновики! Отредактируйте её в разделе 'Записи'.");
+        loadSuggestions();
+      }
+    }
+  </script>
+</body>
+</html>
