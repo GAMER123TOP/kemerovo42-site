@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <style>
+        /* ... (твои старые стили для кнопок, текста и сетки остаются) ... */
         .like-btn, .save-btn { margin-top: 20px; padding: 10px 20px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; user-select: none; margin-right: 10px; }
         .like-btn:hover, .save-btn:hover { background: #e2e8f0; }
         .article-text { font-size: 1.1rem; line-height: 1.8; color: var(--text-color); word-wrap: break-word; white-space: normal; margin-bottom: 30px; }
@@ -27,28 +28,76 @@
         .btn-del-comment { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; margin-top: 10px; padding: 0; }
         .btn-del-comment:hover { text-decoration: underline; }
 
-        /* СЕТКА ГАЛЕРЕИ */
-        .gallery-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 30px;
-            margin-bottom: 30px;
+        .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 30px; margin-bottom: 30px; }
+        .gallery-grid img { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: transform 0.2s; }
+        .gallery-grid img:hover { transform: scale(1.02); }
+        @media (max-width: 768px) { .gallery-grid { grid-template-columns: 1fr; } .gallery-grid img { height: 250px; } }
+
+        /* --- СТИЛИ ДЛЯ ЛАЙТБОКСА (МОДАЛЬНОГО ОКНА) --- */
+        .lightbox {
+            display: none; 
+            position: fixed; 
+            z-index: 9999; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0, 0, 0, 0.9); 
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
-        .gallery-grid img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 8px;
+        .lightbox.active {
+            display: flex;
+            opacity: 1;
+        }
+        .lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            transition: transform 0.3s ease;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: 0.2s;
+            z-index: 10000;
         }
-        .gallery-grid img:hover {
-            transform: scale(1.02);
+        .lightbox-close:hover { color: var(--accent); transform: scale(1.1); }
+        
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #fff;
+            font-size: 40px;
+            cursor: pointer;
+            padding: 10px;
+            transition: 0.2s;
+            z-index: 10000;
+            user-select: none;
         }
-        @media (max-width: 768px) {
-            .gallery-grid { grid-template-columns: 1fr; }
-            .gallery-grid img { height: 250px; }
+        .lightbox-nav:hover { color: var(--accent); }
+        .lightbox-prev { left: 20px; }
+        .lightbox-next { right: 20px; }
+        
+        .lightbox-counter {
+            position: absolute;
+            bottom: 20px;
+            color: #fff;
+            font-size: 1rem;
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: 1px;
+            z-index: 10000;
         }
     </style>
 </head>
@@ -57,6 +106,15 @@
     <div id="header-container"></div>
 
     <div class="article-container" id="article-box"><p>Загрузка...</p></div>
+
+    <!-- ЛАЙТБОКС (Скрыт по умолчанию) -->
+    <div class="lightbox" id="lightbox">
+        <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+        <span class="lightbox-nav lightbox-prev" onclick="changeLightboxImage(-1)">&#10094;</span>
+        <img id="lightbox-img" src="" alt="Полноэкранное фото">
+        <span class="lightbox-nav lightbox-next" onclick="changeLightboxImage(1)">&#10095;</span>
+        <div class="lightbox-counter" id="lightbox-counter">1 / 1</div>
+    </div>
 
     <button id="scroll-top-btn" title="Наверх"><i class="fas fa-arrow-up"></i></button>
 
@@ -76,6 +134,10 @@
         const articleBox = document.getElementById('article-box');
         let currentUser = null;
         let userRole = 'reader';
+        
+        // Переменные для лайтбокса
+        let galleryImages = [];
+        let currentImageIndex = 0;
 
         onAuthStateChanged(auth, async (user) => { 
             currentUser = user; 
@@ -86,6 +148,58 @@
             }
         });
 
+        // --- УПРАВЛЕНИЕ ЛАЙТБОКСОМ ---
+        window.openLightbox = function(index) {
+            currentImageIndex = index;
+            const lightbox = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            
+            img.src = galleryImages[currentImageIndex];
+            document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${galleryImages.length}`;
+            
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Блокируем скролл страницы
+        };
+
+        window.closeLightbox = function() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        };
+
+        window.changeLightboxImage = function(direction) {
+            currentImageIndex += direction;
+            
+            // Зацикливаем
+            if (currentImageIndex >= galleryImages.length) currentImageIndex = 0;
+            if (currentImageIndex < 0) currentImageIndex = galleryImages.length - 1;
+            
+            const img = document.getElementById('lightbox-img');
+            img.style.transform = 'scale(0.9)'; // Небольшая анимация
+            
+            setTimeout(() => {
+                img.src = galleryImages[currentImageIndex];
+                document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${galleryImages.length}`;
+                img.style.transform = 'scale(1)';
+            }, 150);
+        };
+
+        // Обработка клавиш на клавиатуре (Esc, Влево, Вправо)
+        document.addEventListener('keydown', (e) => {
+            const lightbox = document.getElementById('lightbox');
+            if (!lightbox.classList.contains('active')) return;
+            
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft') changeLightboxImage(-1);
+            if (e.key === 'ArrowRight') changeLightboxImage(1);
+        });
+
+        // Закрытие по клику на фон
+        document.getElementById('lightbox').addEventListener('click', (e) => {
+            if (e.target.id === 'lightbox') closeLightbox();
+        });
+
+        // --- ОСТАЛЬНОЙ КОД СТАТЬИ ---
         const scrollBtn = document.getElementById('scroll-top-btn');
         window.addEventListener('scroll', () => {
             if (window.scrollY > 300) scrollBtn.classList.add('show');
@@ -144,17 +258,26 @@
                     const authorName = escapeHTML(data.author || 'Редакция');
                     const authorLink = `<a href="index.html?author=${encodeURIComponent(authorName)}" class="author-link">${authorName}</a>`;
 
-                    // Генерация галереи
+                    // Собираем все картинки для лайтбокса
+                    galleryImages = [];
+                    if (data.image) galleryImages.push(data.image);
+                    if (data.gallery) {
+                        data.gallery.forEach(url => { if(url) galleryImages.push(url); });
+                    }
+
                     let galleryHTML = '';
                     if (data.gallery && data.gallery.length > 0) {
                         galleryHTML = '<div class="gallery-grid">';
-                        data.gallery.forEach(url => {
-                            if(url) galleryHTML += `<img src="${escapeHTML(url)}" onclick="window.open('${escapeHTML(url)}', '_blank')" alt="Фото">`;
+                        data.gallery.forEach((url, index) => {
+                            if(url) {
+                                // Индекс в лайтбоксе будет зависеть от того, есть ли главная обложка (она под индексом 0)
+                                const lightboxIndex = (data.image ? index + 1 : index);
+                                galleryHTML += `<img src="${escapeHTML(url)}" onclick="openLightbox(${lightboxIndex})" alt="Фото">`;
+                            }
                         });
                         galleryHTML += '</div>';
                     }
 
-                    // Генерация тегов (поддержка старого и нового формата)
                     let tagsArray = data.tags || (data.tag ? [data.tag] : ['НОВОСТЬ']);
                     let tagsHTML = tagsArray.map(t => `<span class="tag" style="margin-right: 5px;">${escapeHTML(t)}</span>`).join('');
 
@@ -165,7 +288,8 @@
                             <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
                             <span class="author"><i class="far fa-user"></i> ${authorLink}</span>
                         </div>
-                        <img src="${escapeHTML(imgSrc)}" class="article-image" onerror="this.style.display='none'">
+                        <!-- Главная обложка тоже кликабельна -->
+                        <img src="${escapeHTML(imgSrc)}" class="article-image" onclick="openLightbox(0)" style="cursor: pointer;" onerror="this.style.display='none'">
                         
                         <div class="article-text">${DOMPurify.sanitize(data.text)}</div>
                         
