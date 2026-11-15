@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Категории | Кемерово 42</title>
+  <link rel="stylesheet" href="admin-style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Категории новостей</h1>
+    </div>
+
+    <div class="card" style="display: flex; gap: 20px; align-items: flex-start;">
+      <div style="flex: 2;">
+        <table class="wp-table">
+          <thead>
+            <tr><th>Название</th><th>Код (для ссылки)</th><th style="text-align: right;">Действия</th></tr>
+          </thead>
+          <tbody id="categories-list"><tr><td colspan="3" style="text-align:center;">Загрузка...</td></tr></tbody>
+        </table>
+      </div>
+      
+      <div style="flex: 1; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
+        <h3 style="margin-bottom: 15px; font-family: 'Montserrat';">Добавить новую</h3>
+        <div class="form-group">
+          <label>Название (видно на сайте)</label>
+          <input type="text" id="cat-name" class="form-control" placeholder="Например: Спорт">
+        </div>
+        <div class="form-group">
+          <label>Код (латиницей для URL)</label>
+          <input type="text" id="cat-slug" class="form-control" placeholder="sport">
+        </div>
+        <button onclick="addCategory()" class="btn-create" style="width: 100%;">Добавить</button>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { renderSidebar } from './sidebar.js';
+    import { firebaseConfig } from '../firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    renderSidebar('categories');
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function loadCategories() {
+      const tbody = document.getElementById('categories-list');
+      const snapshot = await getDocs(collection(db, "categories"));
+      tbody.innerHTML = '';
+      if (snapshot.empty) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Категорий пока нет</td></tr>'; return; }
+      
+      snapshot.forEach(docSnap => {
+        const d = docSnap.data();
+        tbody.innerHTML += `
+          <tr>
+            <td><div class="row-title">${d.name}</div></td>
+            <td><code>${d.slug}</code></td>
+            <td style="text-align: right;">
+              <button onclick="deleteCategory('${docSnap.id}')" class="btn-icon danger"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>`;
+      });
+    }
+
+    window.addCategory = async function() {
+      const name = document.getElementById('cat-name').value.trim();
+      const slug = document.getElementById('cat-slug').value.trim().toLowerCase().replace(/\s+/g, '-');
+      if (!name || !slug) return alert("Заполните оба поля!");
+      
+      await addDoc(collection(db, "categories"), { name: name, slug: slug });
+      document.getElementById('cat-name').value = '';
+      document.getElementById('cat-slug').value = '';
+      loadCategories();
+    }
+
+    window.deleteCategory = async function(id) {
+      if(confirm('Удалить категорию? (Новости в ней останутся, но перестанут отображаться в меню)')) {
+        await deleteDoc(doc(db, "categories", id));
+        loadCategories();
+      }
+    }
+    loadCategories();
+  </script>
+</body>
+</html>
