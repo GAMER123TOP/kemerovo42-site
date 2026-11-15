@@ -5,11 +5,6 @@
   <title>Записи | Кемерово 42</title>
   <link rel="stylesheet" href="admin-style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-    .status-published { background: #dcfce7; color: #166534; }
-    .status-draft { background: #fef08a; color: #854d0e; }
-  </style>
 </head>
 <body>
   <div id="sidebar-container"></div>
@@ -40,7 +35,7 @@
     import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, orderBy, where, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     renderSidebar('posts');
     const app = initializeApp(firebaseConfig);
@@ -49,14 +44,17 @@
     async function loadAllNews() {
       const tbody = document.getElementById('news-list');
       try {
+        // Загружаем все, КРОМЕ архива
         const snapshot = await getDocs(query(collection(db, "news"), orderBy("date", "desc")));
         tbody.innerHTML = '';
-        if (snapshot.empty) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Новостей нет</td></tr>'; return; }
         
+        let hasNews = false;
+
         snapshot.forEach(docSnap => {
           const d = docSnap.data();
-          
-          // Определяем статус (если поля нет, считаем, что опубликовано)
+          if (d.status === 'archived') return; // Пропускаем архивные
+
+          hasNews = true;
           const isDraft = d.status === 'draft';
           const statusBadge = isDraft 
             ? '<span class="status-badge status-draft">Черновик</span>' 
@@ -73,27 +71,34 @@
               <td><i class="far fa-eye"></i> ${d.views || 0}</td>
               <td style="text-align: right;">
                 <div class="actions" style="justify-content: flex-end;">
-                  <!-- Кнопка редактирования (карандаш) -->
                   <a href="create.html?id=${docSnap.id}" class="btn-icon" title="Редактировать"><i class="fas fa-pen"></i></a>
-                  
                   ${!isDraft ? `<a href="../article.html?id=${docSnap.id}" target="_blank" class="btn-icon" title="Посмотреть"><i class="fas fa-eye"></i></a>` : ''}
-                  
-                  <button onclick="deleteNews('${docSnap.id}')" class="btn-icon danger" title="Удалить"><i class="fas fa-trash"></i></button>
+                  <button onclick="archiveNews('${docSnap.id}')" class="btn-icon danger" title="В архив"><i class="fas fa-box-archive"></i></button>
                 </div>
               </td>
             </tr>`;
         });
+
+        if (!hasNews) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Новостей нет</td></tr>';
+        }
+
       } catch (e) { 
         console.error(e);
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Ошибка загрузки</td></tr>'; 
       }
     }
 
-    window.deleteNews = async function(id) {
-      if(confirm('Удалить новость?')) {
-        try { await deleteDoc(doc(db, "news", id)); loadAllNews(); } catch (e) { alert('Ошибка удаления'); }
+    // Отправка в архив
+    window.archiveNews = async function(id) {
+      if(confirm('Отправить новость в архив? Её можно будет восстановить.')) {
+        try { 
+            await updateDoc(doc(db, "news", id), { status: 'archived' }); 
+            loadAllNews(); 
+        } catch (e) { alert('Ошибка архивации'); }
       }
     };
+    
     loadAllNews();
   </script>
 </body>
