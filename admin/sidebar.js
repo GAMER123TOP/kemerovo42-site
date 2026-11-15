@@ -9,12 +9,18 @@ const auth = getAuth(app);
 
 export function renderSidebar(activePage) {
     const container = document.getElementById('sidebar-container');
-    if (!container) {
-        console.warn("Контейнер #sidebar-container не найден на странице");
-        return;
+    if (!container) return;
+
+    if (!document.getElementById('sidebar-styles')) {
+        const style = document.createElement('style');
+        style.id = 'sidebar-styles';
+        style.innerHTML = `
+            .logout-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s; }
+            .logout-btn:hover { background: #ef4444; color: white; }
+        `;
+        document.head.appendChild(style);
     }
 
-    // 1. Сначала рисуем сам HTML сайдбара (он появится мгновенно)
     container.innerHTML = `
       <aside class="sidebar">
         <div class="sidebar-logo">КЕМЕРОВО <span>42</span></div>
@@ -23,6 +29,10 @@ export function renderSidebar(activePage) {
           <li><a href="posts.html" class="${activePage === 'posts' ? 'active' : ''}"><i class="fas fa-newspaper"></i> Записи</a></li>
           <li><a href="create.html" class="${activePage === 'create' ? 'active' : ''}"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
           <li><a href="categories.html" class="${activePage === 'categories' ? 'active' : ''}"><i class="fas fa-tags"></i> Категории</a></li>
+          
+          <!-- ВКЛАДКА ПРЕДЛОЖКИ (скрыта по умолчанию) -->
+          <li id="menu-sugg-li" style="display: none;"><a href="suggestions.html" class="${activePage === 'suggestions' ? 'active' : ''}"><i class="fas fa-bullhorn"></i> Предложки</a></li>
+          
           <li id="menu-users-li" style="display: none;"><a href="users.html" class="${activePage === 'users' ? 'active' : ''}"><i class="fas fa-users"></i> Пользователи</a></li>
           <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
         </ul>
@@ -34,51 +44,41 @@ export function renderSidebar(activePage) {
                 <span class="sidebar-user-role" id="sb-role">...</span>
               </div>
           </div>
-          <button onclick="logoutAdmin()" class="logout-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
-            <i class="fas fa-sign-out-alt"></i> Выйти
-          </button>
+          <button onclick="logoutAdmin()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Выйти</button>
         </div>
       </aside>
     `;
 
-    // 2. Теперь подгружаем данные пользователя
     onAuthStateChanged(auth, async (user) => {
-        if (!user) { 
-            console.log("Пользователь не авторизован, редирект на login.html");
-            window.location.href = 'login.html'; 
-            return; 
-        }
+        if (!user) { window.location.href = 'login.html'; return; }
         
-        try {
-            // Имя из почты
-            const loginName = user.email.split('@')[0];
-            document.getElementById('sb-name').innerText = loginName;
-            
-            // Получаем роль из токена
-            const token = await user.getIdTokenResult();
-            const isAdmin = token.claims.admin === true;
-            const isEditor = token.claims.editor === true;
-            
-            document.getElementById('sb-role').innerText = isAdmin ? 'Администратор' : (isEditor ? 'Редактор' : 'Журналист');
-            
-            // Показываем вкладку "Пользователи" только админу
-            if (isAdmin) {
-                document.getElementById('menu-users-li').style.display = 'block';
-            }
+        const token = await user.getIdTokenResult();
+        const isAdmin = token.claims.admin === true;
+        const isModerator = token.claims.moderator === true;
+        
+        let roleText = 'Редактор';
+        if (isAdmin) roleText = 'Администратор';
+        else if (isModerator) roleText = 'Модератор';
+        
+        document.getElementById('sb-name').innerText = user.email.split('@')[0];
+        document.getElementById('sb-role').innerText = roleText;
+        
+        // Показываем вкладки по ролям
+        if (isAdmin) {
+            document.getElementById('menu-users-li').style.display = 'block';
+            document.getElementById('menu-sugg-li').style.display = 'block';
+        } else if (isModerator) {
+            document.getElementById('menu-sugg-li').style.display = 'block';
+        }
 
-            // Загружаем аватарку
-            const userSnap = await getDoc(doc(db, "users", user.uid));
-            if (userSnap.exists()) {
-                const data = userSnap.data();
-                const avatarImg = document.getElementById('sb-avatar');
-                if (data.photoURL) {
-                    avatarImg.src = data.photoURL;
-                } else if (data.displayName) {
-                    avatarImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName)}&background=0f172a&color=d4af37&bold=true`;
-                }
+        const userSnap = await getDoc(doc(db, "users", user.uid));
+        if (userSnap.exists()) {
+            const data = userSnap.data();
+            if (data.photoURL) {
+                document.getElementById('sb-avatar').src = data.photoURL;
+            } else if (data.displayName) {
+                document.getElementById('sb-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName)}&background=0f172a&color=d4af37&bold=true`;
             }
-        } catch (e) {
-            console.error("Ошибка загрузки данных в сайдбар:", e);
         }
     });
 
