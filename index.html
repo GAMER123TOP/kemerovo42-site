@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Кемерово 42 | Главные новости</title>
-    
     <meta property="og:title" content="КЕМЕРОВО 42 — Официальный новостной портал">
     <meta property="og:description" content="Главные новости города, криминал и сводки О МВД.">
     <meta property="og:image" content="https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=630">
@@ -23,26 +22,8 @@
 </head>
 <body>
 
-    <header>
-        <div class="header-container">
-            <div class="logo">
-                <a href="index.html" style="text-decoration: none; color: white;">
-                    <h1>КЕМЕРОВО <span>42</span></h1>
-                </a>
-                <p>Официальный новостной портал</p>
-            </div>
-            
-            <div class="auth-buttons" id="auth-buttons" style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
-                <a href="./admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; display: inline-flex;">Войти</a>
-                <a href="./admin/index.html" id="dash-btn" class="btn-outline" style="text-decoration: none; display: none;">Панель управления</a>
-                <a href="./admin/profile.html" id="prof-btn" class="btn-outline" style="text-decoration: none; display: none; align-items: center; gap: 8px; padding: 6px 16px;">
-                    <img id="header-avatar" src="" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; display: none; background: #ccc;">
-                    <span id="header-username">Профиль</span>
-                </a>
-            </div>
-            <button id="theme-toggle" style="margin-left: 10px;"><i class="fas fa-moon"></i> Тёмная тема</button>
-        </div>
-    </header>
+    <!-- Сюда подставится шапка -->
+    <div id="header-container"></div>
 
     <nav>
         <a href="index.html" class="active">Главная</a>
@@ -54,7 +35,6 @@
     <div class="container">
         <main class="main-content">
             <div id="news-container"><p style="text-align: center; padding: 20px;">Загрузка новостей...</p></div>
-            
             <div style="text-align: center; margin-top: 20px;">
                 <button id="load-more-btn" onclick="loadMore()" style="display: none; padding: 12px 24px; background: var(--accent); border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s;">Показать еще</button>
             </div>
@@ -70,113 +50,55 @@
         </aside>
     </div>
 
-    <footer>
-        <p>&copy; 2026 Телепрограмма «Кемерово 42».</p>
-    </footer>
+    <footer><p>&copy; 2026 Телепрограмма «Кемерово 42».</p></footer>
 
     <script type="module">
+        import { renderHeader } from './main/header.js';
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        renderHeader(); // Рисуем шапку
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
         
         const newsContainer = document.getElementById('news-container');
         const loadMoreBtn = document.getElementById('load-more-btn');
         const NEWS_PER_PAGE = 10;
-        
         let lastVisible = null;
         let isFirstLoad = true;
 
-        // --- ФУНКЦИЯ ДЛЯ ДАТЫ И ВРЕМЕНИ (Кемерово + МСК) ---
         function formatDateTime(timestamp) {
             if (!timestamp || !timestamp.seconds) return 'Дата не указана';
-            
             const date = new Date(timestamp.seconds * 1000);
-            
-            // Кемерово (UTC+7)
-            const kemerovoDate = new Date(date.getTime() + (7 * 60 * 60 * 1000));
-            const kDate = kemerovoDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const kTime = kemerovoDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-            
-            // Москва (UTC+3)
-            const mskDate = new Date(date.getTime() + (3 * 60 * 60 * 1000));
-            const mTime = mskDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-
-            return `${kDate} ${kTime} <span style="font-size:0.85em; color:#94a3b8; margin-left:5px;">(МСК ${mTime})</span>`;
+            const kD = new Date(date.getTime() + (7 * 60 * 60 * 1000));
+            const mD = new Date(date.getTime() + (3 * 60 * 60 * 1000));
+            return `${kD.toLocaleDateString('ru-RU')} ${kD.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})} <span style="font-size:0.85em; color:#94a3b8; margin-left:5px;">(МСК ${mD.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})})</span>`;
         }
-
-        // --- АВТОРИЗАЦИЯ ---
-        onAuthStateChanged(auth, async (user) => {
-            const loginBtn = document.getElementById('login-btn');
-            const dashBtn = document.getElementById('dash-btn');
-            const profBtn = document.getElementById('prof-btn');
-            const headerAvatar = document.getElementById('header-avatar');
-            const headerUsername = document.getElementById('header-username');
-
-            if (user) {
-                loginBtn.style.display = 'none';
-                dashBtn.style.display = 'inline-flex';
-                profBtn.style.display = 'inline-flex';
-                headerUsername.innerText = user.email.split('@')[0];
-
-                try {
-                    const docSnap = await getDoc(doc(db, "users", user.uid));
-                    if (docSnap.exists() && docSnap.data().photoURL) {
-                        headerAvatar.src = docSnap.data().photoURL;
-                        headerAvatar.style.display = 'block';
-                    }
-                } catch (e) {}
-            } else {
-                loginBtn.style.display = 'inline-flex';
-                dashBtn.style.display = 'none';
-                profBtn.style.display = 'none';
-            }
-        });
 
         function escapeHTML(str) {
             if (!str) return '';
             return str.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
 
-        // --- ЗАГРУЗКА НОВОСТЕЙ ---
         async function loadNews() {
             try {
                 let q;
-                if (isFirstLoad) {
-                    q = query(collection(db, "news"), orderBy("date", "desc"), limit(NEWS_PER_PAGE));
-                } else if (lastVisible) {
-                    q = query(collection(db, "news"), orderBy("date", "desc"), startAfter(lastVisible), limit(NEWS_PER_PAGE));
-                } else {
-                    return;
-                }
+                if (isFirstLoad) q = query(collection(db, "news"), orderBy("date", "desc"), limit(NEWS_PER_PAGE));
+                else if (lastVisible) q = query(collection(db, "news"), orderBy("date", "desc"), startAfter(lastVisible), limit(NEWS_PER_PAGE));
+                else return;
 
-                const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) { 
+                const snapshot = await getDocs(q);
+                if (snapshot.empty) { 
                     loadMoreBtn.style.display = 'none'; 
-                    if (isFirstLoad) {
-                        newsContainer.innerHTML = `
-                            <div style="text-align: center; padding: 60px 20px; background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--shadow-sm);">
-                                <i class="fas fa-newspaper" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 15px;"></i>
-                                <h3 style="color: var(--text-muted);">Новостей пока нет</h3>
-                                <p style="color: var(--text-muted); font-size: 0.9rem;">Редакция готовит первые материалы</p>
-                            </div>
-                        `;
-                    }
+                    if (isFirstLoad) newsContainer.innerHTML = '<div style="text-align: center; padding: 60px 20px; background: var(--card-bg); border-radius: 16px;"><h3 style="color: var(--text-muted);">Новостей пока нет</h3></div>';
                     return; 
                 }
 
-                lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
-                
-                if (querySnapshot.size === NEWS_PER_PAGE) {
-                    loadMoreBtn.style.display = 'block';
-                } else {
-                    loadMoreBtn.style.display = 'none';
-                }
+                lastVisible = snapshot.docs[snapshot.docs.length - 1];
+                if (snapshot.size === NEWS_PER_PAGE) loadMoreBtn.style.display = 'block';
+                else loadMoreBtn.style.display = 'none';
 
                 if (isFirstLoad) {
                     newsContainer.innerHTML = '';
@@ -188,12 +110,9 @@
 
                 const gridContainer = newsContainer.querySelector('.news-grid') || newsContainer;
 
-                querySnapshot.forEach((doc, index) => {
+                snapshot.forEach((doc, index) => {
                     const data = doc.data();
-                    
-                    // ИСПОЛЬЗУЕМ ФУНКЦИЮ ВРЕМЕНИ
                     let dateStr = formatDateTime(data.date);
-
                     const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=500';
                     const imgTag = `<img src="${escapeHTML(imgSrc)}" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=400'">`;
 
@@ -224,45 +143,32 @@
                         `;
                     }
                 });
-            } catch (error) {
-                console.error("Ошибка загрузки:", error);
-                if (isFirstLoad) newsContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: #e74c3c;">Не удалось загрузить новости.</p>';
-            }
+            } catch (error) { console.error(error); }
         }
 
-        // --- ТОП-5 ---
         async function loadPopular() {
             const list = document.getElementById('popular-list');
             try {
                 const q = query(collection(db, "news"), orderBy("views", "desc"), limit(5));
                 const snapshot = await getDocs(q);
                 list.innerHTML = '';
-                if (snapshot.empty) {
-                    list.innerHTML = '<li style="color: var(--text-muted); font-size: 0.9rem;">Пока нет статистики</li>';
-                    return;
-                }
+                if (snapshot.empty) { list.innerHTML = '<li style="color: var(--text-muted);">Пока нет статистики</li>'; return; }
                 let index = 1;
                 snapshot.forEach((doc) => {
                     const data = doc.data();
                     list.innerHTML += `
                         <li style="display: flex; gap: 12px; align-items: flex-start;">
                             <span style="font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.2rem; color: var(--accent); line-height: 1;">${index}</span>
-                            <a href="article.html?id=${doc.id}" style="text-decoration: none; color: var(--text-color); font-size: 0.9rem; font-weight: 500; line-height: 1.4;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-color)'">
-                                ${escapeHTML(data.title)}
-                            </a>
-                        </li>
-                    `;
+                            <a href="article.html?id=${doc.id}" style="text-decoration: none; color: var(--text-color); font-size: 0.9rem; font-weight: 500; line-height: 1.4;">${escapeHTML(data.title)}</a>
+                        </li>`;
                     index++;
                 });
-            } catch (e) {
-                list.innerHTML = '<li style="color: #e74c3c; font-size: 0.8rem;">Ошибка загрузки топа.</li>';
-            }
+            } catch (e) { list.innerHTML = '<li style="color: #e74c3c;">Ошибка. Нужен индекс Firebase.</li>'; }
         }
 
         window.loadMore = function() { loadNews(); };
         loadNews();
         loadPopular();
     </script>
-    <script src="script.js"></script>
 </body>
 </html>
