@@ -8,10 +8,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <style>
-        .like-btn { margin-top: 30px; padding: 10px 20px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .like-btn { margin-top: 30px; padding: 10px 20px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: 0.2s; user-select: none; }
         .like-btn:hover { background: #e2e8f0; }
         .article-text { font-size: 1.1rem; line-height: 1.8; color: var(--text-color); word-wrap: break-word; white-space: normal; }
         .article-text p { margin-bottom: 20px; }
+        .author-link { color: var(--text-color); text-decoration: none; font-weight: 600; transition: 0.2s; }
+        .author-link:hover { color: var(--accent); }
     </style>
 </head>
 <body>
@@ -19,6 +21,9 @@
     <div id="header-container"></div>
 
     <div class="article-container" id="article-box"><p>Загрузка...</p></div>
+
+    <!-- Кнопка наверх -->
+    <button id="scroll-top-btn" title="Наверх"><i class="fas fa-arrow-up"></i></button>
 
     <script type="module">
         import { renderHeader } from './header.js';
@@ -35,8 +40,17 @@
         const newsId = new URLSearchParams(window.location.search).get('id');
         const articleBox = document.getElementById('article-box');
         let currentUser = null;
+        let currentLikes = [];
 
         onAuthStateChanged(auth, (user) => { currentUser = user; });
+
+        // Кнопка Наверх
+        const scrollBtn = document.getElementById('scroll-top-btn');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) scrollBtn.classList.add('show');
+            else scrollBtn.classList.remove('show');
+        });
+        scrollBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
         function escapeHTML(str) {
             if (!str) return '';
@@ -61,35 +75,36 @@
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         
-                        // --- ЗАЩИТА ОТ НАКРУТКИ ПРОСМОТРОВ ---
+                        // Защита от накрутки
                         const viewedKey = `viewed_${newsId}`;
                         if (!localStorage.getItem(viewedKey)) {
-                            // Если пользователь еще не смотрел, добавляем +1 и ставим метку
                             updateDoc(docRef, { views: increment(1) }).catch(() => {});
                             localStorage.setItem(viewedKey, 'true');
                         }
-                        // -------------------------------------
 
                         let dateStr = formatDateTime(data.date);
-                        const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980';
+                        const imgSrc = data.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800';
                         
-                        const likesArray = data.likes || [];
-                        const isLiked = currentUser && likesArray.includes(currentUser.uid);
+                        currentLikes = data.likes || [];
+                        const isLiked = currentUser && currentLikes.includes(currentUser.uid);
                         const heartIcon = isLiked ? '<i class="fas fa-heart" style="color: #e74c3c;"></i>' : '<i class="far fa-heart"></i>';
+
+                        const authorName = escapeHTML(data.author || 'Редакция');
+                        const authorLink = `<a href="index.html?author=${encodeURIComponent(authorName)}" class="author-link">${authorName}</a>`;
 
                         articleBox.innerHTML = `
                             <h1 class="article-title">${escapeHTML(data.title)}</h1>
                             <div class="article-meta">
                                 <span class="tag">${escapeHTML(data.tag || 'НОВОСТЬ')}</span>
                                 <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
-                                <span class="author"><i class="far fa-user"></i> ${escapeHTML(data.author || 'Редакция')}</span>
+                                <span class="author"><i class="far fa-user"></i> ${authorLink}</span>
                             </div>
-                            <img src="${escapeHTML(imgSrc)}" class="article-image" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167'">
+                            <img src="${escapeHTML(imgSrc)}" class="article-image" onerror="this.style.display='none'">
                             
                             <div class="article-text">${DOMPurify.sanitize(data.text)}</div>
                             
                             <button id="like-btn" class="like-btn">
-                                ${heartIcon} Нравится (<span id="like-count">${likesArray.length}</span>)
+                                <span id="heart-icon">${heartIcon}</span> Нравится (<span id="like-count">${currentLikes.length}</span>)
                             </button>
                             
                             <a href="index.html" class="back-btn">← Назад</a>
@@ -98,12 +113,23 @@
                         document.getElementById('like-btn').onclick = async () => {
                             if (!currentUser) return alert('Войдите в аккаунт, чтобы оценивать новости!');
                             
-                            if (likesArray.includes(currentUser.uid)) {
+                            const heartSpan = document.getElementById('heart-icon');
+                            const countSpan = document.getElementById('like-count');
+                            
+                            heartSpan.classList.add('like-animate');
+                            setTimeout(() => heartSpan.classList.remove('like-animate'), 800);
+
+                            if (currentLikes.includes(currentUser.uid)) {
                                 await updateDoc(docRef, { likes: arrayRemove(currentUser.uid) });
+                                countSpan.innerText = parseInt(countSpan.innerText) - 1;
+                                currentLikes = currentLikes.filter(id => id !== currentUser.uid);
+                                heartSpan.innerHTML = '<i class="far fa-heart"></i>';
                             } else {
                                 await updateDoc(docRef, { likes: arrayUnion(currentUser.uid) });
+                                countSpan.innerText = parseInt(countSpan.innerText) + 1;
+                                currentLikes.push(currentUser.uid);
+                                heartSpan.innerHTML = '<i class="fas fa-heart" style="color: #e74c3c;"></i>';
                             }
-                            location.reload(); 
                         };
 
                     } else {
