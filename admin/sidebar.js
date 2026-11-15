@@ -32,6 +32,7 @@ export function renderSidebar(activePage) {
           <li><a href="create.html" class="${activePage === 'create' ? 'active' : ''}"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
           <li><a href="categories.html" class="${activePage === 'categories' ? 'active' : ''}"><i class="fas fa-tags"></i> Категории</a></li>
           <li><a href="polls.html" class="${activePage === 'polls' ? 'active' : ''}"><i class="fas fa-poll"></i> Опросы</a></li>
+          <li><a href="comments.html" class="${activePage === 'comments' ? 'active' : ''}"><i class="fas fa-comments"></i> Комментарии</a></li>
           <li id="menu-sugg-li" style="display: none;">
               <a href="suggestions.html" class="${activePage === 'suggestions' ? 'active' : ''}" style="display: flex; align-items: center;">
                   <i class="fas fa-bullhorn"></i> Предложки 
