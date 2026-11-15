@@ -2,6 +2,7 @@ import { firebaseConfig } from '../firebase-config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { showConfirm } from '../ui.js'; // <-- Импорт уведомлений
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -49,7 +50,7 @@ export function renderSidebar(activePage) {
                 <span class="sidebar-user-role" id="sb-role">...</span>
               </div>
           </div>
-          <button onclick="logoutAdmin()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Выйти</button>
+          <button onclick="handleLogout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Выйти</button>
         </div>
       </aside>
     `;
@@ -68,7 +69,6 @@ export function renderSidebar(activePage) {
         document.getElementById('sb-name').innerText = user.email.split('@')[0];
         document.getElementById('sb-role').innerText = roleText;
         
-        // Показываем вкладки по ролям
         if (isAdmin) {
             document.getElementById('menu-users-li').style.display = 'block';
         }
@@ -76,7 +76,6 @@ export function renderSidebar(activePage) {
         if (isAdmin || isModerator) {
             document.getElementById('menu-sugg-li').style.display = 'block';
             
-            // Считаем новые предложки для уведомления
             try {
                 const suggSnap = await getDocs(collection(db, "suggestions"));
                 if (suggSnap.size > 0) {
@@ -84,7 +83,7 @@ export function renderSidebar(activePage) {
                     countSpan.innerText = suggSnap.size;
                     countSpan.style.display = 'inline-block';
                 }
-            } catch (e) { console.error("Ошибка подсчета предложек:", e); }
+            } catch (e) { }
         }
 
         const userSnap = await getDoc(doc(db, "users", user.uid));
@@ -98,8 +97,10 @@ export function renderSidebar(activePage) {
         }
     });
 
-    window.logoutAdmin = async function() {
-        await signOut(auth);
-        window.location.href = 'login.html';
+    window.handleLogout = function() {
+        showConfirm('Выход', 'Вы уверены, что хотите выйти из аккаунта?', async () => {
+            await signOut(auth);
+            window.location.href = 'login.html';
+        }, 'Выйти');
     };
 }
