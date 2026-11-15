@@ -156,11 +156,7 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     
-                    const viewedKey = `viewed_${newsId}`;
-                    if (!localStorage.getItem(viewedKey)) {
-                        updateDoc(docRef, { views: increment(1) }).catch(() => {});
-                        localStorage.setItem(viewedKey, 'true');
-                    }
+                    updateDoc(docRef, { views: increment(1) }).catch(() => {});
 
                     let dateStr = formatDateTime(data.date);
                     const imgSrc = data.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800';
