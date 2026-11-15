@@ -33,13 +33,10 @@ export function renderSidebar(activePage) {
       <aside class="sidebar">
         <div class="sidebar-logo">КЕМЕРОВО <span>42</span></div>
         <ul class="sidebar-menu">
-          <li><a href="index.html" class="${activePage === 'dashboard' ? 'active' : ''}"><i class="fas fa-home"></i> Панель управления</a></li>
+          <li><a href="index.html" class="${activePage === 'dashboard' ? 'active' : ''}"><i class="fas fa-home"></i> Дашборд</a></li>
           <li><a href="posts.html" class="${activePage === 'posts' ? 'active' : ''}"><i class="fas fa-newspaper"></i> Записи (Новости)</a></li>
           <li><a href="create.html" class="${activePage === 'create' ? 'active' : ''}"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
-          
-          <!-- ВКЛАДКА КАТЕГОРИИ -->
           <li><a href="categories.html" class="${activePage === 'categories' ? 'active' : ''}"><i class="fas fa-tags"></i> Категории</a></li>
-          
           <li id="menu-users-li" style="display: none;"><a href="users.html" class="${activePage === 'users' ? 'active' : ''}"><i class="fas fa-users"></i> Пользователи</a></li>
           <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
         </ul>
@@ -56,15 +53,30 @@ export function renderSidebar(activePage) {
       </aside>
     `;
 
-            const userSnap = await getDoc(doc(db, "users", user.uid));
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = 'login.html'; return; }
+        
+        const token = await user.getIdTokenResult();
+        const role = token.claims.admin ? 'admin' : (token.claims.editor ? 'editor' : 'journalist');
+        
+        document.getElementById('sb-name').innerText = user.email.split('@')[0];
+        document.getElementById('sb-role').innerText = role === 'admin' ? 'Администратор' : 'Редактор';
+        
+        if (role === 'admin') {
+            document.getElementById('menu-users-li').style.display = 'block';
+        }
+
+        const userSnap = await getDoc(doc(db, "users", user.uid));
         if (userSnap.exists()) {
             const data = userSnap.data();
             if (data.photoURL) {
                 document.getElementById('sb-avatar').src = data.photoURL;
             } else if (data.displayName) {
+                // Генерируем аватарку из инициалов (например, "ВМ")
                 document.getElementById('sb-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName)}&background=0f172a&color=d4af37&bold=true`;
             }
         }
+    });
 
     window.logoutAdmin = async function() {
         await signOut(auth);
