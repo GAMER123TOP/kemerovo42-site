@@ -84,7 +84,7 @@
   <script type="module">
     import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
-    import { showToast, showConfirm } from '../ui.js'; // <-- ИМПОРТ
+    import { showToast, showConfirm } from '../ui.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, getDocs, addDoc, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -112,8 +112,16 @@
     const editId = urlParams.get('id');
     let currentUserDisplayName = 'Редакция';
 
+    // ЗАЩИТА ОТ МОДЕРАТОРА
     onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
+      if (!user) { window.location.href = 'login.html'; return; }
+      
+      const token = await user.getIdTokenResult();
+      if (token.claims.moderator && !token.claims.admin) {
+          window.location.href = 'index.html';
+          return;
+      }
+      
       const userSnap = await getDoc(doc(db, "users", user.uid));
       if (userSnap.exists()) currentUserDisplayName = userSnap.data().displayName || user.email.split('@')[0];
     });
