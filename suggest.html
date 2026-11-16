@@ -46,6 +46,7 @@
     <script type="module">
         import { renderHeader } from './header.js';
         import { firebaseConfig } from './firebase-config.js';
+        import { showToast } from './ui.js'; // <-- ИМПОРТ
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -69,13 +70,13 @@
                     title: title,
                     text: text,
                     date: serverTimestamp(),
-                    status: 'new' // Новая предложка
+                    status: 'new'
                 });
-                alert("Спасибо! Ваша новость отправлена в редакцию.");
+                showToast("Спасибо! Ваша новость отправлена в редакцию.", 'success');
                 document.getElementById('suggest-form').reset();
             } catch (error) {
                 console.error(error);
-                alert("Ошибка отправки. Попробуйте позже.");
+                showToast("Ошибка отправки. Попробуйте позже.", 'error');
             } finally {
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить в редакцию';
                 btn.disabled = false;
