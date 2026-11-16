@@ -34,6 +34,7 @@
   <script type="module">
     import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
+    import { showToast, showConfirm } from '../ui.js'; // <-- ИМПОРТ
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, getDocs, query, where, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -44,7 +45,6 @@
     async function loadArchive() {
       const tbody = document.getElementById('archive-list');
       try {
-        // Ищем новости, у которых статус "archived"
         const q = query(collection(db, "news"), where("status", "==", "archived"));
         const snapshot = await getDocs(q);
         
@@ -76,21 +76,20 @@
       }
     }
 
-    // Восстановить
     window.restoreNews = async function(id) {
-      if(confirm('Восстановить эту новость?')) {
-        // Меняем статус на draft (черновик), чтобы можно было проверить и опубликовать
+      showConfirm('Восстановить?', 'Новость вернется в черновики.', async () => {
         await updateDoc(doc(db, "news", id), { status: 'draft' });
+        showToast('Новость восстановлена', 'success');
         loadArchive();
-      }
+      });
     };
 
-    // Удалить навсегда
     window.deletePermanently = async function(id) {
-      if(confirm('Удалить новость НАВСЕГДА? Это действие нельзя отменить.')) {
+      showConfirm('Удалить НАВСЕГДА?', 'Это действие нельзя отменить.', async () => {
         await deleteDoc(doc(db, "news", id));
+        showToast('Новость удалена навсегда', 'info');
         loadArchive();
-      }
+      }, 'Удалить');
     };
 
     loadArchive();
