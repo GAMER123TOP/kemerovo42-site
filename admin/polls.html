@@ -36,6 +36,7 @@
   <script type="module">
     import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
+    import { showToast, showConfirm } from '../ui.js'; // <-- ИМПОРТ
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -68,7 +69,7 @@
       const question = document.getElementById('poll-question').value.trim();
       const optionsStr = document.getElementById('poll-options').value.trim();
       
-      if (!question || !optionsStr) return alert('Заполните вопрос и варианты!');
+      if (!question || !optionsStr) return showToast('Заполните вопрос и варианты!', 'error');
       
       const optionsArray = optionsStr.split(',').map(opt => ({
         text: opt.trim(),
@@ -83,14 +84,16 @@
 
       document.getElementById('poll-question').value = '';
       document.getElementById('poll-options').value = '';
+      showToast('Опрос создан!', 'success');
       loadPolls();
     }
 
     window.deletePoll = async function(id) {
-      if(confirm('Удалить опрос?')) {
+      showConfirm('Удалить опрос?', 'Голоса будут потеряны.', async () => {
         await deleteDoc(doc(db, "polls", id));
+        showToast('Опрос удален', 'success');
         loadPolls();
-      }
+      });
     }
 
     loadPolls();
