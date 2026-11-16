@@ -17,7 +17,6 @@
     .gallery-row input { flex-grow: 1; }
     .btn-remove-photo { background: #ef4444; color: white; border: none; border-radius: 6px; padding: 0 15px; cursor: pointer; }
 
-    /* Стили для чекбоксов рубрик */
     .tags-container { display: flex; flex-wrap: wrap; gap: 10px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
     .tag-checkbox { display: flex; align-items: center; gap: 8px; background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
     .tag-checkbox:hover { border-color: var(--accent); }
@@ -41,7 +40,6 @@
       <div class="form-group">
         <label>Рубрики (можно выбрать несколько)</label>
         <div class="tags-container" id="tags-container">
-            <!-- Сюда скрипт добавит чекбоксы -->
             <span style="color: var(--text-muted); font-size: 0.9rem;">Загрузка...</span>
         </div>
       </div>
@@ -63,7 +61,6 @@
         <div id="editor-container"></div>
       </div>
 
-      <!-- БЛОК ГАЛЕРЕИ -->
       <div class="form-group" style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
         <label style="font-size: 1.1rem; margin-bottom: 10px;">Фотогалерея (доп. фото)</label>
         <div id="gallery-container"></div>
@@ -87,6 +84,7 @@
   <script type="module">
     import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
+    import { showToast, showConfirm } from '../ui.js'; // <-- ИМПОРТ
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, getDocs, addDoc, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -120,7 +118,6 @@
       if (userSnap.exists()) currentUserDisplayName = userSnap.data().displayName || user.email.split('@')[0];
     });
 
-    // Загрузка существующих категорий в виде чекбоксов
     async function loadCategoriesToSelect(selectedTags = []) {
         const container = document.getElementById('tags-container');
         container.innerHTML = '';
@@ -162,7 +159,6 @@
         loadCategoriesToSelect();
     }
 
-    // Загрузка данных для редактирования
     if (editId) {
         document.getElementById('page-title').innerText = 'Редактирование новости';
         document.querySelector('button[onclick="saveNews(\'published\')"]').innerHTML = '<i class="fas fa-save"></i> Сохранить и опубликовать';
@@ -174,9 +170,7 @@
                 document.getElementById('image').value = data.image || '';
                 document.getElementById('description').value = data.description || '';
                 
-                // Если у новости был старый формат (одна строка tag), превращаем её в массив
                 let savedTags = data.tags || (data.tag ? [data.tag] : []);
-                
                 loadCategoriesToSelect(savedTags);
 
                 if (data.text) quill.clipboard.dangerouslyPasteHTML(data.text);
@@ -187,8 +181,8 @@
                     addGalleryField();
                 }
             } else {
-                alert("Новость не найдена");
-                window.location.href = 'posts.html';
+                showToast('Новость не найдена', 'error');
+                setTimeout(() => window.location.href = 'posts.html', 1500);
             }
         });
     }
@@ -197,19 +191,18 @@
       const title = document.getElementById('title').value;
       const text = quill.root.innerHTML;
       
-      if(!title || quill.getText().trim() === '') return alert("Заполните заголовок и текст!");
+      if(!title || quill.getText().trim() === '') return showToast("Заполните заголовок и текст!", 'error');
 
-      // Собираем выбранные чекбоксы
       const checkedTags = Array.from(document.querySelectorAll('#tags-container input:checked')).map(cb => cb.value);
-      if (checkedTags.length === 0) return alert("Выберите хотя бы одну рубрику!");
+      if (checkedTags.length === 0) return showToast("Выберите хотя бы одну рубрику!", 'error');
 
       const galleryInputs = document.querySelectorAll('.gallery-input');
       const galleryArray = Array.from(galleryInputs).map(input => input.value.trim()).filter(url => url !== '');
 
       const newsData = {
         title: title, 
-        tags: checkedTags, // Сохраняем массив рубрик
-        tag: checkedTags[0], // Оставляем первую для совместимости со старыми скриптами
+        tags: checkedTags, 
+        tag: checkedTags[0], 
         image: document.getElementById('image').value || '',
         description: document.getElementById('description').value || '',
         text: text, 
@@ -221,15 +214,18 @@
       try {
         if (editId) {
           await updateDoc(doc(db, "news", editId), newsData);
-          alert(status === 'draft' ? "Черновик сохранен!" : "Новость обновлена!");
+          showToast(status === 'draft' ? "Черновик сохранен!" : "Новость обновлена!", 'success');
         } else {
           newsData.date = serverTimestamp();
           newsData.views = 0;
           await addDoc(collection(db, "news"), newsData);
-          alert(status === 'draft' ? "Черновик создан!" : "Новость опубликована!");
+          showToast(status === 'draft' ? "Черновик создан!" : "Новость опубликована!", 'success');
         }
-        window.location.href = 'posts.html';
-      } catch (error) { console.error(error); alert("Ошибка сохранения!"); }
+        setTimeout(() => window.location.href = 'posts.html', 1000);
+      } catch (error) { 
+        console.error(error); 
+        showToast("Ошибка сохранения!", 'error'); 
+      }
     };
   </script>
 </body>
