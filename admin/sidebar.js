@@ -12,7 +12,14 @@ export function renderSidebar(activePage) {
     const container = document.getElementById('sidebar-container');
     if (!container) return;
 
-    // Проверяем сохраненную тему
+    // СИНХРОНИЗАЦИЯ ТЕМЫ (берем тему сайта, если в админке не задана)
+    const siteTheme = localStorage.getItem('theme');
+    const adminTheme = localStorage.getItem('admin_theme');
+    // Если на сайте темная, а в админке нет — включаем темную и в админке
+    if (siteTheme === 'dark' && !adminTheme) {
+        localStorage.setItem('admin_theme', 'dark');
+    }
+    
     const isDark = localStorage.getItem('admin_theme') === 'dark';
     if (isDark) document.body.classList.add('dark-theme');
 
@@ -23,10 +30,14 @@ export function renderSidebar(activePage) {
           <li><a href="index.html" class="${activePage === 'dashboard' ? 'active' : ''}"><i class="fas fa-home"></i> Панель управления</a></li>
           <li><a href="posts.html" class="${activePage === 'posts' ? 'active' : ''}"><i class="fas fa-newspaper"></i> Записи</a></li>
           <li><a href="archive.html" class="${activePage === 'archive' ? 'active' : ''}"><i class="fas fa-archive"></i> Архив</a></li>
-          <li><a href="create.html" class="${activePage === 'create' ? 'active' : ''}"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
+          
+          <!-- ВКЛАДКА СОЗДАТЬ (будет скрыта для модераторов) -->
+          <li id="menu-create-li"><a href="create.html" class="${activePage === 'create' ? 'active' : ''}"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
+          
           <li><a href="categories.html" class="${activePage === 'categories' ? 'active' : ''}"><i class="fas fa-tags"></i> Категории</a></li>
           <li><a href="polls.html" class="${activePage === 'polls' ? 'active' : ''}"><i class="fas fa-poll"></i> Опросы</a></li>
           <li><a href="comments.html" class="${activePage === 'comments' ? 'active' : ''}"><i class="fas fa-comments"></i> Комментарии</a></li>
+          
           <li id="menu-sugg-li" style="display: none;">
               <a href="suggestions.html" class="${activePage === 'suggestions' ? 'active' : ''}" style="display: flex; align-items: center;">
                   <i class="fas fa-bullhorn"></i> Предложки 
@@ -45,12 +56,9 @@ export function renderSidebar(activePage) {
                 <span class="sidebar-user-role" id="sb-role">...</span>
               </div>
           </div>
-          
-          <!-- Кнопка смены темы -->
           <button id="theme-toggle-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
             <i class="fas ${isDark ? 'fa-sun' : 'fa-moon'}"></i> ${isDark ? 'Светлая тема' : 'Тёмная тема'}
           </button>
-
           <button onclick="handleLogout()" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
             <i class="fas fa-sign-out-alt"></i> Выйти
           </button>
@@ -58,7 +66,6 @@ export function renderSidebar(activePage) {
       </aside>
     `;
 
-    // Привязываем событие клика к кнопке темы
     document.getElementById('theme-toggle-btn').addEventListener('click', () => {
         const body = document.body;
         const btn = document.getElementById('theme-toggle-btn');
@@ -67,9 +74,11 @@ export function renderSidebar(activePage) {
         
         if (body.classList.contains('dark-theme')) {
             localStorage.setItem('admin_theme', 'dark');
+            localStorage.setItem('theme', 'dark'); // Синхронизация с сайтом
             btn.innerHTML = '<i class="fas fa-sun"></i> Светлая тема';
         } else {
             localStorage.setItem('admin_theme', 'light');
+            localStorage.setItem('theme', 'light'); // Синхронизация с сайтом
             btn.innerHTML = '<i class="fas fa-moon"></i> Тёмная тема';
         }
     });
@@ -88,6 +97,12 @@ export function renderSidebar(activePage) {
         document.getElementById('sb-name').innerText = user.email.split('@')[0];
         document.getElementById('sb-role').innerText = roleText;
         
+        // СКРЫВАЕМ ВКЛАДКУ "СОЗДАТЬ" ДЛЯ МОДЕРАТОРА
+        if (isModerator) {
+            const createLi = document.getElementById('menu-create-li');
+            if (createLi) createLi.style.display = 'none';
+        }
+
         if (isAdmin) document.getElementById('menu-users-li').style.display = 'block';
         
         if (isAdmin || isModerator) {
