@@ -44,6 +44,7 @@
   <script type="module">
     import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
+    import { showToast, showConfirm } from '../ui.js'; // <-- ИМПОРТ
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -75,8 +76,8 @@
             </tr>`;
         });
       } catch (e) {
-        console.error("Ошибка загрузки категорий:", e);
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">Ошибка загрузки. Проверьте правила Firebase.</td></tr>';
+        console.error(e);
+        showToast('Ошибка загрузки категорий', 'error');
       }
     }
 
@@ -84,24 +85,29 @@
       const name = document.getElementById('cat-name').value.trim();
       const slug = document.getElementById('cat-slug').value.trim().toLowerCase().replace(/\s+/g, '-');
       
-      if (!name || !slug) return alert("Заполните оба поля!");
+      if (!name || !slug) return showToast("Заполните оба поля!", 'error');
       
       try {
         await addDoc(collection(db, "categories"), { name: name, slug: slug });
         document.getElementById('cat-name').value = '';
         document.getElementById('cat-slug').value = '';
+        showToast('Категория создана!', 'success');
         loadCategories();
       } catch (e) {
-        console.error("Ошибка добавления:", e);
-        alert("Ошибка: " + e.message);
+        showToast("Ошибка: " + e.message, 'error');
       }
     }
 
     window.deleteCategory = async function(id) {
-      if(confirm('Удалить категорию?')) {
-        await deleteDoc(doc(db, "categories", id));
-        loadCategories();
-      }
+      showConfirm('Удалить категорию?', 'Новости в ней останутся, но перестанут отображаться в меню.', async () => {
+        try {
+          await deleteDoc(doc(db, "categories", id));
+          showToast('Категория удалена', 'success');
+          loadCategories();
+        } catch (e) {
+            showToast('Ошибка удаления', 'error');
+        }
+      });
     }
 
     loadCategories();
