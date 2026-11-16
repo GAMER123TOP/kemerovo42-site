@@ -1,6 +1,6 @@
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const app = initializeApp(firebaseConfig);
@@ -11,20 +11,22 @@ export function renderHeader() {
     const container = document.getElementById('header-container');
     if (!container) return;
 
-    // СИНХРОНИЗАЦИЯ ТЕМЫ
-    const siteTheme = localStorage.getItem('theme');
-    const adminTheme = localStorage.getItem('admin_theme');
-    if (adminTheme === 'dark' && !siteTheme) {
-        localStorage.setItem('theme', 'dark');
-    }
+    const siteTheme = localStorage.getItem('theme') || 'light';
+    if (siteTheme === 'dark') document.body.classList.add('dark-theme');
 
     container.innerHTML = `
-      <header id="main-header" style="position: sticky; top: 0; z-index: 100; transition: all 0.3s ease; background: #0f172a; border-bottom: 4px solid var(--accent);">
-        <div class="header-container" style="display: flex; align-items: center; justify-content: space-between; padding: 15px 24px;">
+      <!-- Бегущая строка (скрыта по умолчанию) -->
+      <div class="ticker-wrap" id="ticker-wrap" style="display: none;">
+          <div class="ticker" id="ticker-content">Загрузка...</div>
+      </div>
+
+      <header id="main-header">
+        <div class="header-container">
             <div class="logo">
                 <a href="/kemerovo42-site/index.html" style="text-decoration: none; color: white;">
                     <h1>КЕМЕРОВО <span>42</span></h1>
                 </a>
+                <p>Официальный новостной портал</p>
             </div>
 
             <div class="search-container" style="margin-left: auto; margin-right: 15px; display: flex; align-items: center;">
@@ -32,9 +34,9 @@ export function renderHeader() {
                 <button onclick="document.getElementById('search-input').style.display = document.getElementById('search-input').style.display === 'block' ? 'none' : 'block'" style="background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer; padding: 5px;"><i class="fas fa-search"></i></button>
             </div>
             
-            <div class="auth-buttons" id="auth-buttons" style="display: flex; align-items: center; gap: 10px;">
-                <a href="/kemerovo42-site/suggest.html" class="btn-outline" style="text-decoration: none; padding: 8px 15px; font-size: 0.85rem;"><i class="fas fa-bullhorn"></i> Предложить</a>
-                <a href="/kemerovo42-site/admin/login.html" id="login-btn" class="btn-outline" style="text-decoration: none; padding: 8px 15px; font-size: 0.85rem;">Войти</a>
+            <div class="auth-buttons" id="auth-buttons">
+                <a href="/kemerovo42-site/suggest.html" class="btn-outline"><i class="fas fa-bullhorn"></i> Предложить</a>
+                <a href="/kemerovo42-site/admin/login.html" id="login-btn" class="btn-outline">Войти</a>
                 
                 <div id="user-menu" style="display: none; position: relative;">
                     <button onclick="document.getElementById('dropdown').style.display = document.getElementById('dropdown').style.display === 'block' ? 'none' : 'block'" style="background: rgba(255,255,255,0.1); border: none; border-radius: 30px; padding: 4px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: white;">
@@ -48,22 +50,53 @@ export function renderHeader() {
                     </div>
                 </div>
 
-                <button id="theme-toggle" style="background: rgba(255,255,255,0.1); border: none; border-radius: 30px; padding: 8px 12px; color: white; cursor: pointer;"><i class="fas fa-moon"></i></button>
+                <button id="theme-toggle"><i class="fas fa-moon"></i></button>
             </div>
         </div>
       </header>
     `;
+
+    // --- ЛОГИКА БЕГУЩЕЙ СТРОКИ ---
+    const tickerWrap = document.getElementById('ticker-wrap');
+    const tickerContent = document.getElementById('ticker-content');
+
+    async function loadTicker() {
+        try {
+            const tickerSnap = await getDoc(doc(db, "settings", "ticker"));
+            
+            if (tickerSnap.exists() && tickerSnap.data().enabled === false) return;
+
+            let textToShow = '';
+            
+            if (tickerSnap.exists() && tickerSnap.data().customText) {
+                textToShow = tickerSnap.data().customText;
+            } else {
+                const snapshot = await getDocs(query(collection(db, "news"), orderBy("date", "desc"), limit(5)));
+                if (!snapshot.empty) {
+                    let titles = [];
+                    snapshot.forEach(doc => titles.push(doc.data().title));
+                    textToShow = titles.join(' • ') + ' • ';
+                }
+            }
+
+            if (textToShow) {
+                tickerContent.innerText = textToShow;
+                tickerWrap.style.display = 'block';
+            }
+        } catch (e) {
+            console.error("Ошибка загрузки бегущей строки:", e);
+        }
+    }
+    loadTicker();
 
     window.addEventListener('scroll', () => {
         const header = document.getElementById('main-header');
         if (window.scrollY > 50) {
             header.style.background = 'rgba(15, 23, 42, 0.85)';
             header.style.backdropFilter = 'blur(10px)';
-            header.style.borderBottom = '4px solid transparent';
         } else {
-            header.style.background = '#0f172a';
+            header.style.background = 'var(--header-bg)';
             header.style.backdropFilter = 'none';
-            header.style.borderBottom = '4px solid var(--accent)';
         }
     });
 
@@ -116,23 +149,17 @@ export function renderHeader() {
     });
 
     const toggleBtn = document.getElementById('theme-toggle');
-    const body = document.body;
-    
-    // ПРИМЕНЯЕМ ТЕМУ ПРИ ЗАГРУЗКЕ
-    if (localStorage.getItem('theme') === 'dark') {
-        body.classList.add('dark-theme');
-        toggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
-    }
+    if (siteTheme === 'dark') toggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
     
     toggleBtn.addEventListener('click', () => {
-        body.classList.toggle('dark-theme');
-        if (body.classList.contains('dark-theme')) {
+        document.body.classList.toggle('dark-theme');
+        if (document.body.classList.contains('dark-theme')) {
             localStorage.setItem('theme', 'dark');
-            localStorage.setItem('admin_theme', 'dark'); // Синхронизация с админкой
+            localStorage.setItem('admin_theme', 'dark');
             toggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
         } else {
             localStorage.setItem('theme', 'light');
-            localStorage.setItem('admin_theme', 'light'); // Синхронизация с админкой
+            localStorage.setItem('admin_theme', 'light');
             toggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
         }
     });
