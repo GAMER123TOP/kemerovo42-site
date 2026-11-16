@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@400;600;800&display=swap');
 
 :root {
-    --admin-bg: #f1f5f9;
+    --admin-bg: #f8fafc;
     --sidebar-bg: #0f172a;
     --sidebar-text: #94a3b8;
     --sidebar-hover: #1e293b;
@@ -12,6 +12,18 @@
     --accent: #d4af37;
     --border: #e2e8f0;
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    --border-radius: 12px;
+}
+
+body.dark-theme {
+    --admin-bg: #0a0a0a;
+    --sidebar-bg: #000000;
+    --sidebar-text: #9ca3af;
+    --sidebar-hover: #111111;
+    --card-bg: #171717;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --border: #262626;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -22,11 +34,12 @@ body {
     color: var(--text-main);
     display: flex;
     min-height: 100vh;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 /* ====== SIDEBAR (Боковое меню) ====== */
 .sidebar {
-    width: 260px;
+    width: 270px;
     background-color: var(--sidebar-bg);
     color: white;
     display: flex;
@@ -38,10 +51,10 @@ body {
 
 .sidebar-logo {
     padding: 24px;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 1.5rem;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.4rem;
     font-weight: 800;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
     text-align: center;
 }
 .sidebar-logo span { color: var(--accent); }
@@ -50,6 +63,7 @@ body {
     list-style: none;
     padding: 20px 0;
     flex-grow: 1;
+    overflow-y: auto;
 }
 
 .sidebar-menu li a {
@@ -77,7 +91,7 @@ body {
 
 .sidebar-user {
     padding: 20px 24px;
-    border-top: 1px solid rgba(255,255,255,0.1);
+    border-top: 1px solid rgba(255,255,255,0.05);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -95,10 +109,10 @@ body {
 
 /* ====== MAIN CONTENT (Рабочая область) ====== */
 .main-content {
-    margin-left: 260px;
+    margin-left: 270px;
     flex-grow: 1;
-    padding: 30px 40px;
-    width: calc(100% - 260px);
+    padding: 40px 50px;
+    width: calc(100% - 270px);
 }
 
 .page-header {
@@ -108,16 +122,16 @@ body {
     margin-bottom: 30px;
 }
 .page-title {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 1.8rem;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.6rem;
     font-weight: 700;
-    color: var(--sidebar-bg);
+    color: var(--text-main);
 }
 .btn-create {
     background-color: var(--accent);
     color: var(--sidebar-bg);
-    padding: 10px 20px;
-    border-radius: 8px;
+    padding: 12px 24px;
+    border-radius: var(--border-radius);
     text-decoration: none;
     font-weight: 700;
     display: inline-flex;
@@ -132,14 +146,14 @@ body {
 /* ====== КАРТОЧКИ И ТАБЛИЦЫ ====== */
 .card {
     background: var(--card-bg);
-    border-radius: 12px;
+    border-radius: var(--border-radius);
     box-shadow: var(--shadow);
-    padding: 24px;
+    padding: 30px;
     border: 1px solid var(--border);
     margin-bottom: 24px;
 }
 
-/* Таблица (как в ВП) */
+/* Таблица */
 .wp-table {
     width: 100%;
     border-collapse: collapse;
@@ -151,21 +165,22 @@ body {
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding: 12px 16px;
+    padding: 16px 20px;
     border-bottom: 2px solid var(--border);
 }
 .wp-table td {
-    padding: 16px;
+    padding: 20px;
     border-bottom: 1px solid var(--border);
     font-size: 0.95rem;
     vertical-align: middle;
 }
 .wp-table tr:last-child td { border-bottom: none; }
-.wp-table tr:hover { background-color: #f8fafc; }
+.wp-table tr:hover { background-color: rgba(0,0,0,0.01); }
+body.dark-theme .wp-table tr:hover { background-color: rgba(255,255,255,0.02); }
 
 .wp-table .row-title {
     font-weight: 600;
-    color: var(--sidebar-bg);
+    color: var(--text-main);
     font-size: 1.05rem;
     margin-bottom: 4px;
 }
@@ -175,7 +190,7 @@ body {
 }
 
 .badge {
-    padding: 4px 10px;
+    padding: 6px 12px;
     border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 600;
@@ -183,6 +198,8 @@ body {
 }
 .badge-draft { background: #fef08a; color: #854d0e; }
 .badge-published { background: #bbf7d0; color: #166534; }
+body.dark-theme .badge-draft { background: #423a00; color: #fef08a; }
+body.dark-theme .badge-published { background: #052e16; color: #86efac; }
 
 .actions { display: flex; gap: 8px; }
 .btn-icon {
@@ -197,8 +214,8 @@ body {
     align-items: center;
     justify-content: center;
 }
-.btn-icon:hover { border-color: var(--accent); color: var(--accent); }
-.btn-icon.danger:hover { border-color: #ef4444; color: #ef4444; }
+.btn-icon:hover { border-color: var(--accent); color: var(--accent); background: rgba(212, 175, 55, 0.05); }
+.btn-icon.danger:hover { border-color: #ef4444; color: #ef4444; background: rgba(239, 68, 68, 0.05); }
 
 /* Формы */
 .form-group { margin-bottom: 20px; }
@@ -211,81 +228,22 @@ body {
 }
 .form-control {
     width: 100%;
-    padding: 12px;
+    padding: 12px 16px;
     border: 1px solid var(--border);
     border-radius: 8px;
     font-family: inherit;
     font-size: 1rem;
+    background: var(--card-bg);
+    color: var(--text-main);
     transition: 0.2s;
 }
 .form-control:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
 }
 
-/* Тёмная тема */
-body.dark-theme {
-    --admin-bg: #0f172a;
-    --sidebar-bg: #020617;
-    --sidebar-text: #94a3b8;
-    --sidebar-hover: #1e293b;
-    --card-bg: #1e293b;
-    --text-main: #e2e8f0;
-    --text-muted: #94a3b8;
-    --border: #334155;
-}
-
-body.dark-theme .card,
-body.dark-theme .stat-card,
-body.dark-theme .guide-card,
-body.dark-theme .suggestion-card {
-    background: #1e293b !important;
-    border-color: #334155 !important;
-    color: #e2e8f0 !important;
-}
-
-body.dark-theme .wp-table th {
-    color: #94a3b8;
-    border-bottom-color: #334155;
-}
-
-body.dark-theme .wp-table td {
-    border-bottom-color: #334155;
-    color: #e2e8f0;
-}
-
-body.dark-theme .wp-table tr:hover {
-    background-color: #0f172a;
-}
-
-body.dark-theme .row-title {
-    color: #f8fafc;
-}
-
-body.dark-theme input, 
-body.dark-theme select, 
-body.dark-theme textarea {
-    background: #0f172a !important;
-    border-color: #334155 !important;
-    color: #e2e8f0 !important;
-}
-
-body.dark-theme #editor-container {
-    background: #0f172a;
-}
-
-body.dark-theme .ql-toolbar {
-    background: #1e293b;
-    border-color: #334155 !important;
-}
-
-body.dark-theme .ql-container {
-    border-color: #334155 !important;
-    background: #0f172a;
-    color: #e2e8f0;
-}
-
-body.dark-theme .ql-editor {
-    color: #e2e8f0;
-}
+/* Стили для Quill в темной теме */
+body.dark-theme .ql-toolbar { background: var(--card-bg); border-color: var(--border) !important; }
+body.dark-theme .ql-container { border-color: var(--border) !important; background: var(--card-bg); color: var(--text-main); }
+body.dark-theme .ql-editor { color: var(--text-main); }
