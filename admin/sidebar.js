@@ -12,16 +12,31 @@ export function renderSidebar(activePage) {
     const container = document.getElementById('sidebar-container');
     if (!container) return;
 
-    // СИНХРОНИЗАЦИЯ ТЕМЫ (берем тему сайта, если в админке не задана)
-    const siteTheme = localStorage.getItem('theme');
-    const adminTheme = localStorage.getItem('admin_theme');
-    // Если на сайте темная, а в админке нет — включаем темную и в админке
-    if (siteTheme === 'dark' && !adminTheme) {
-        localStorage.setItem('admin_theme', 'dark');
-    }
+    // --- СИНХРОНИЗАЦИЯ ТЕМЫ ---
+    // Берем тему с сайта. Если её нет, ставим светлую по умолчанию.
+    const siteTheme = localStorage.getItem('theme') || 'light';
+    // Принудительно обновляем тему админки, чтобы она всегда совпадала с сайтом
+    localStorage.setItem('admin_theme', siteTheme);
     
-    const isDark = localStorage.getItem('admin_theme') === 'dark';
-    if (isDark) document.body.classList.add('dark-theme');
+    const isDark = siteTheme === 'dark';
+    if (isDark) {
+        document.body.classList.add('dark-theme');
+    } else {
+        document.body.classList.remove('dark-theme');
+    }
+    // -------------------------
+
+    if (!document.getElementById('sidebar-styles')) {
+        const style = document.createElement('style');
+        style.id = 'sidebar-styles';
+        style.innerHTML = `
+            .logout-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s; }
+            .logout-btn:hover { background: #ef4444; color: white; }
+            .theme-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(255,255,255,0.05); color: var(--sidebar-text); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s; }
+            .theme-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+        `;
+        document.head.appendChild(style);
+    }
 
     container.innerHTML = `
       <aside class="sidebar">
@@ -56,16 +71,18 @@ export function renderSidebar(activePage) {
                 <span class="sidebar-user-role" id="sb-role">...</span>
               </div>
           </div>
-          <button id="theme-toggle-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
+          
+          <!-- Кнопка смены темы -->
+          <button id="theme-toggle-btn" class="theme-btn">
             <i class="fas ${isDark ? 'fa-sun' : 'fa-moon'}"></i> ${isDark ? 'Светлая тема' : 'Тёмная тема'}
           </button>
-          <button onclick="handleLogout()" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; margin-top: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
-            <i class="fas fa-sign-out-alt"></i> Выйти
-          </button>
+
+          <button onclick="handleLogout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Выйти</button>
         </div>
       </aside>
     `;
 
+    // Обработчик переключения темы
     document.getElementById('theme-toggle-btn').addEventListener('click', () => {
         const body = document.body;
         const btn = document.getElementById('theme-toggle-btn');
@@ -74,11 +91,11 @@ export function renderSidebar(activePage) {
         
         if (body.classList.contains('dark-theme')) {
             localStorage.setItem('admin_theme', 'dark');
-            localStorage.setItem('theme', 'dark'); // Синхронизация с сайтом
+            localStorage.setItem('theme', 'dark'); // Обновляем тему на сайте
             btn.innerHTML = '<i class="fas fa-sun"></i> Светлая тема';
         } else {
             localStorage.setItem('admin_theme', 'light');
-            localStorage.setItem('theme', 'light'); // Синхронизация с сайтом
+            localStorage.setItem('theme', 'light'); // Обновляем тему на сайте
             btn.innerHTML = '<i class="fas fa-moon"></i> Тёмная тема';
         }
     });
@@ -97,7 +114,7 @@ export function renderSidebar(activePage) {
         document.getElementById('sb-name').innerText = user.email.split('@')[0];
         document.getElementById('sb-role').innerText = roleText;
         
-        // СКРЫВАЕМ ВКЛАДКУ "СОЗДАТЬ" ДЛЯ МОДЕРАТОРА
+        // Скрываем вкладку "Создать" для модераторов
         if (isModerator) {
             const createLi = document.getElementById('menu-create-li');
             if (createLi) createLi.style.display = 'none';
