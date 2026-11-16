@@ -11,6 +11,13 @@ export function renderHeader() {
     const container = document.getElementById('header-container');
     if (!container) return;
 
+    // СИНХРОНИЗАЦИЯ ТЕМЫ
+    const siteTheme = localStorage.getItem('theme');
+    const adminTheme = localStorage.getItem('admin_theme');
+    if (adminTheme === 'dark' && !siteTheme) {
+        localStorage.setItem('theme', 'dark');
+    }
+
     container.innerHTML = `
       <header id="main-header" style="position: sticky; top: 0; z-index: 100; transition: all 0.3s ease; background: #0f172a; border-bottom: 4px solid var(--accent);">
         <div class="header-container" style="display: flex; align-items: center; justify-content: space-between; padding: 15px 24px;">
@@ -110,17 +117,22 @@ export function renderHeader() {
 
     const toggleBtn = document.getElementById('theme-toggle');
     const body = document.body;
+    
+    // ПРИМЕНЯЕМ ТЕМУ ПРИ ЗАГРУЗКЕ
     if (localStorage.getItem('theme') === 'dark') {
         body.classList.add('dark-theme');
         toggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
     }
+    
     toggleBtn.addEventListener('click', () => {
         body.classList.toggle('dark-theme');
         if (body.classList.contains('dark-theme')) {
             localStorage.setItem('theme', 'dark');
+            localStorage.setItem('admin_theme', 'dark'); // Синхронизация с админкой
             toggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
         } else {
             localStorage.setItem('theme', 'light');
+            localStorage.setItem('admin_theme', 'light'); // Синхронизация с админкой
             toggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
         }
     });
