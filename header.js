@@ -11,11 +11,24 @@ export function renderHeader() {
     const container = document.getElementById('header-container');
     if (!container) return;
 
+    // --- ПРЕДЗАГРУЗКА ШРИФТОВ ДЛЯ СКОРОСТИ ---
+    if (!document.querySelector('link[href="https://fonts.googleapis.com"]')) {
+        const preconnect1 = document.createElement('link');
+        preconnect1.rel = 'preconnect';
+        preconnect1.href = 'https://fonts.googleapis.com';
+        document.head.appendChild(preconnect1);
+
+        const preconnect2 = document.createElement('link');
+        preconnect2.rel = 'preconnect';
+        preconnect2.href = 'https://fonts.gstatic.com';
+        preconnect2.crossOrigin = 'anonymous';
+        document.head.appendChild(preconnect2);
+    }
+
     const siteTheme = localStorage.getItem('theme') || 'light';
     if (siteTheme === 'dark') document.body.classList.add('dark-theme');
 
     container.innerHTML = `
-      <!-- Бегущая строка (скрыта по умолчанию) -->
       <div class="ticker-wrap" id="ticker-wrap" style="display: none;">
           <div class="ticker" id="ticker-content">Загрузка...</div>
       </div>
@@ -56,7 +69,6 @@ export function renderHeader() {
       </header>
     `;
 
-    // --- ЛОГИКА БЕГУЩЕЙ СТРОКИ ---
     const tickerWrap = document.getElementById('ticker-wrap');
     const tickerContent = document.getElementById('ticker-content');
 
