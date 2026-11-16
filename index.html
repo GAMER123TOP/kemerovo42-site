@@ -25,7 +25,6 @@
 
     <div class="container">
         <main class="main-content">
-            <!-- СКЕЛЕТОН ЗАГРУЗКИ -->
             <div id="news-container">
                 <div class="hero-news" style="pointer-events: none;">
                     <div style="width: 100%; height: 460px; background: #e2e8f0; animation: pulse 1.5s infinite;"></div>
@@ -91,7 +90,6 @@
 
         onAuthStateChanged(auth, (user) => { currentUser = user; });
 
-        // --- ОПРОСЫ (БЕЗ АККАУНТА) ---
         async function loadPoll() {
             const widget = document.getElementById('poll-widget');
             const container = document.getElementById('poll-container');
@@ -105,8 +103,6 @@
                 const poll = pollDoc.data();
                 
                 const totalVotes = poll.options.reduce((sum, opt) => sum + opt.votes, 0);
-                
-                // ПРОВЕРКА ЧЕРЕЗ LOCALSTORAGE, А НЕ АККАУНТ
                 const hasVoted = localStorage.getItem(`poll_voted_${pollDoc.id}`) === 'true';
 
                 let html = `<h4 style="font-size: 1rem; margin-bottom: 15px; line-height: 1.4;">${poll.question}</h4>`;
@@ -141,12 +137,10 @@
         }
 
         window.vote = async function(pollId, optionIndex) {
-            // Проверяем localStorage
             if (localStorage.getItem(`poll_voted_${pollId}`)) {
                 return alert('Вы уже голосовали в этом опросе!');
             }
             
-            // Генерируем гостевой ID
             let guestId = localStorage.getItem('guest_id');
             if (!guestId) {
                 guestId = 'guest_' + Math.random().toString(36).substr(2, 9);
@@ -165,13 +159,10 @@
             const newVoters = poll.voters ? [...poll.voters, guestId] : [guestId];
 
             await updateDoc(pollRef, { options: poll.options, voters: newVoters });
-            
-            // Ставим метку, что проголосовали
             localStorage.setItem(`poll_voted_${pollId}`, 'true');
             loadPoll();
         };
 
-        // --- НОВОСТИ ---
         function formatDateTime(timestamp) {
             if (!timestamp || !timestamp.seconds) return 'Дата не указана';
             const utcDate = new Date(timestamp.seconds * 1000);
@@ -222,12 +213,16 @@
                     const imgSrc = data.image || 'https://images.unsplash.com/photo-1590059352802-2c47e8b3f980?auto=format&fit=crop&q=80&w=1200&h=500';
                     const imgTag = `<img src="${escapeHTML(imgSrc)}" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=400'">`;
 
+                    // ВЫВОД ВСЕХ РУБРИК
+                    let tagsArray = data.tags || (data.tag ? [data.tag] : ['НОВОСТЬ']);
+                    let tagsHTML = tagsArray.map(t => `<span class="tag" style="margin-right: 5px;">${escapeHTML(t)}</span>`).join('');
+
                     if (index === 0 && newsContainer.children.length === 1) {
                         newsContainer.innerHTML = `
                             <a href="article.html?id=${doc.id}" class="hero-news" style="text-decoration: none; color: inherit;">
                                 ${imgTag}
                                 <div class="hero-text">
-                                    <span class="tag">${escapeHTML(data.tag || 'НОВОСТЬ')}</span>
+                                    <div style="margin-bottom: 10px;">${tagsHTML}</div>
                                     <h2>${escapeHTML(data.title)}</h2>
                                     <p>${escapeHTML(data.description || '')}</p>
                                     <span class="date"><i class="far fa-clock"></i> ${dateStr} (Кемерово)</span>
@@ -240,7 +235,7 @@
                             <a href="article.html?id=${doc.id}" class="news-card" style="text-decoration: none; color: inherit;">
                                 ${imgTag}
                                 <div class="card-content">
-                                    <span class="tag">${escapeHTML(data.tag || 'НОВОСТЬ')}</span>
+                                    <div style="margin-bottom: 10px;">${tagsHTML}</div>
                                     <h3>${escapeHTML(data.title)}</h3>
                                     <p>${escapeHTML(data.description || '')}</p>
                                     <span class="date" style="display:block; margin-top:10px; font-size:0.85rem;"><i class="far fa-clock"></i> ${dateStr} (Кемерово)</span>
