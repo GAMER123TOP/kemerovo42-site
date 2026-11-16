@@ -13,9 +13,7 @@ export function renderSidebar(activePage) {
     if (!container) return;
 
     // --- СИНХРОНИЗАЦИЯ ТЕМЫ ---
-    // Берем тему с сайта. Если её нет, ставим светлую по умолчанию.
     const siteTheme = localStorage.getItem('theme') || 'light';
-    // Принудительно обновляем тему админки, чтобы она всегда совпадала с сайтом
     localStorage.setItem('admin_theme', siteTheme);
     
     const isDark = siteTheme === 'dark';
@@ -24,7 +22,6 @@ export function renderSidebar(activePage) {
     } else {
         document.body.classList.remove('dark-theme');
     }
-    // -------------------------
 
     if (!document.getElementById('sidebar-styles')) {
         const style = document.createElement('style');
@@ -46,7 +43,6 @@ export function renderSidebar(activePage) {
           <li><a href="posts.html" class="${activePage === 'posts' ? 'active' : ''}"><i class="fas fa-newspaper"></i> Записи</a></li>
           <li><a href="archive.html" class="${activePage === 'archive' ? 'active' : ''}"><i class="fas fa-archive"></i> Архив</a></li>
           
-          <!-- ВКЛАДКА СОЗДАТЬ (будет скрыта для модераторов) -->
           <li id="menu-create-li"><a href="create.html" class="${activePage === 'create' ? 'active' : ''}"><i class="fas fa-plus-circle"></i> Добавить новость</a></li>
           
           <li><a href="categories.html" class="${activePage === 'categories' ? 'active' : ''}"><i class="fas fa-tags"></i> Категории</a></li>
@@ -61,6 +57,10 @@ export function renderSidebar(activePage) {
           </li>
           <li id="menu-users-li" style="display: none;"><a href="users.html" class="${activePage === 'users' ? 'active' : ''}"><i class="fas fa-users"></i> Пользователи</a></li>
           <li><a href="guide.html" class="${activePage === 'guide' ? 'active' : ''}"><i class="fas fa-book"></i> Памятка для СМИ</a></li>
+          
+          <!-- НОВАЯ ВКЛАДКА НАСТРОЙКИ -->
+          <li><a href="settings.html" class="${activePage === 'settings' ? 'active' : ''}"><i class="fas fa-cog"></i> Настройки</a></li>
+          
           <li><a href="../index.html"><i class="fas fa-external-link-alt"></i> На сайт</a></li>
         </ul>
         <div class="sidebar-user" style="flex-direction: column; align-items: stretch;">
@@ -72,7 +72,6 @@ export function renderSidebar(activePage) {
               </div>
           </div>
           
-          <!-- Кнопка смены темы -->
           <button id="theme-toggle-btn" class="theme-btn">
             <i class="fas ${isDark ? 'fa-sun' : 'fa-moon'}"></i> ${isDark ? 'Светлая тема' : 'Тёмная тема'}
           </button>
@@ -82,7 +81,6 @@ export function renderSidebar(activePage) {
       </aside>
     `;
 
-    // Обработчик переключения темы
     document.getElementById('theme-toggle-btn').addEventListener('click', () => {
         const body = document.body;
         const btn = document.getElementById('theme-toggle-btn');
@@ -91,11 +89,11 @@ export function renderSidebar(activePage) {
         
         if (body.classList.contains('dark-theme')) {
             localStorage.setItem('admin_theme', 'dark');
-            localStorage.setItem('theme', 'dark'); // Обновляем тему на сайте
+            localStorage.setItem('theme', 'dark');
             btn.innerHTML = '<i class="fas fa-sun"></i> Светлая тема';
         } else {
             localStorage.setItem('admin_theme', 'light');
-            localStorage.setItem('theme', 'light'); // Обновляем тему на сайте
+            localStorage.setItem('theme', 'light');
             btn.innerHTML = '<i class="fas fa-moon"></i> Тёмная тема';
         }
     });
@@ -114,7 +112,6 @@ export function renderSidebar(activePage) {
         document.getElementById('sb-name').innerText = user.email.split('@')[0];
         document.getElementById('sb-role').innerText = roleText;
         
-        // Скрываем вкладку "Создать" для модераторов
         if (isModerator) {
             const createLi = document.getElementById('menu-create-li');
             if (createLi) createLi.style.display = 'none';
