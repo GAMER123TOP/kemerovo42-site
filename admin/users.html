@@ -31,6 +31,7 @@
   <script type="module">
     import { renderSidebar } from './sidebar.js';
     import { firebaseConfig } from '../firebase-config.js';
+    import { showToast, showConfirm } from '../ui.js'; // <-- ИМПОРТ
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -39,7 +40,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
-    let currentUserUid = null; // Запоминаем айди текущего админа
+    let currentUserUid = null;
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
@@ -63,7 +64,6 @@
         let roleColor = d.role === 'admin' ? '#d4af37' : '#3b82f6';
         let loginText = d.email ? d.email.split('@')[0] : 'Неизвестен';
         
-        // Если это наш профиль, мы не даем его удалить (прячем кнопку)
         const isMe = docSnap.id === currentUserUid;
         const deleteBtn = isMe 
             ? `<span style="font-size: 0.8rem; color: #94a3b8;">Это вы</span>` 
@@ -81,18 +81,20 @@
     }
 
     window.deleteUser = async function(id, role) {
-      // Дополнительная проверка на всякий случай
       if (id === currentUserUid) {
-        return alert('Вы не можете удалить свой собственный профиль!');
+        return showToast('Вы не можете удалить свой собственный профиль!', 'error');
       }
       if (role === 'admin') {
-        return alert('Вы не можете удалить профиль другого администратора!');
+        return showToast('Вы не можете удалить профиль другого администратора!', 'error');
       }
 
-      if(confirm('Заблокировать доступ? Профиль удалится из базы, но аккаунт для входа останется.')) { 
-        await deleteDoc(doc(db, "users", id)); 
-        loadUsers(); 
-      }
+      showConfirm('Заблокировать доступ?', 'Профиль удалится из базы, но аккаунт для входа останется.', async () => {
+        try {
+            await deleteDoc(doc(db, "users", id)); 
+            showToast('Профиль удален', 'success');
+            loadUsers(); 
+        } catch(e) { showToast('Ошибка удаления', 'error'); }
+      });
     };
   </script>
 </body>
