@@ -53,6 +53,7 @@ export function renderHeader() {
                     </button>
                     <div id="dropdown" style="display: none; position: absolute; right: 0; top: 45px; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); min-width: 180px; overflow: hidden; z-index: 1000;">
                         <a href="/kemerovo42-site/admin/index.html" style="display: block; padding: 12px 15px; text-decoration: none; color: #0f172a; font-weight: 500; border-bottom: 1px solid #e2e8f0;"><i class="fas fa-tachometer-alt" style="width: 20px;"></i> Админка</a>
+                        <a href="/kemerovo42-site/admin/settings.html" style="display: block; padding: 12px 15px; text-decoration: none; color: #0f172a; font-weight: 500; border-bottom: 1px solid #e2e8f0;"><i class="fas fa-cog" style="width: 20px;"></i> Настройки</a>
                         <a href="/kemerovo42-site/admin/profile.html" style="display: block; padding: 12px 15px; text-decoration: none; color: #0f172a; font-weight: 500; border-bottom: 1px solid #e2e8f0;"><i class="fas fa-user" style="width: 20px;"></i> Мой профиль</a>
                         <button onclick="logoutUser()" style="width: 100%; text-align: left; padding: 12px 15px; background: none; border: none; color: #ef4444; font-weight: 500; cursor: pointer;"><i class="fas fa-sign-out-alt" style="width: 20px;"></i> Выйти</button>
                     </div>
@@ -74,20 +75,28 @@ export function renderHeader() {
             if (tickerSnap.exists() && tickerSnap.data().enabled === false) return;
 
             let textToShow = '';
+            let speed = 30; // Дефолтная скорость
             
-            if (tickerSnap.exists() && tickerSnap.data().customText) {
-                textToShow = tickerSnap.data().customText;
-            } else {
-                const snapshot = await getDocs(query(collection(db, "news"), orderBy("date", "desc"), limit(5)));
-                if (!snapshot.empty) {
-                    let titles = [];
-                    snapshot.forEach(doc => titles.push(doc.data().title));
-                    textToShow = titles.join(' • ') + ' • ';
+            if (tickerSnap.exists()) {
+                const tData = tickerSnap.data();
+                speed = tData.speed || 30;
+
+                if (tData.mode === 'custom' && tData.customText) {
+                    textToShow = tData.customText;
+                } else {
+                    const snapshot = await getDocs(query(collection(db, "news"), orderBy("date", "desc"), limit(5)));
+                    if (!snapshot.empty) {
+                        let titles = [];
+                        snapshot.forEach(d => titles.push(d.data().title));
+                        textToShow = titles.join(' • ') + ' • ';
+                    }
                 }
             }
 
             if (textToShow) {
                 tickerContent.innerText = textToShow;
+                // Применяем скорость из настроек
+                tickerContent.style.animationDuration = `${speed}s`;
                 tickerWrap.style.display = 'block';
             }
         } catch (e) {
