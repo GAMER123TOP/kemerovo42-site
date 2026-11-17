@@ -1,88 +1,263 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <title>Настройки сайта | Кемерово 42</title>
-  <link rel="stylesheet" href="admin-style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройки | Админка Кемерово 42</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .settings-container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        .settings-card { background: var(--card-bg); border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: var(--shadow-md); }
+        .settings-card h2 { font-family: 'Montserrat'; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+        
+        label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; color: var(--text-color); }
+        input[type="text"], input[type="number"], textarea, select { 
+            width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; 
+            font-family: inherit; font-size: 1rem; background: white; color: var(--text-color);
+        }
+        textarea { resize: vertical; min-height: 100px; }
+        
+        /* Toggle Switch */
+        .toggle-wrapper { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid var(--border); }
+        .toggle-switch { position: relative; width: 50px; height: 26px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        /* Whitelist Tags */
+        .whitelist-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .wl-tag { background: #e2e8f0; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; }
+        .wl-tag button { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1rem; line-height: 1; }
+        
+        .btn-save { background: var(--accent); color: #0f172a; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 1rem; transition: 0.2s; }
+        .btn-save:hover { opacity: 0.9; }
+        .btn-secondary { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-left: 10px; }
+    </style>
 </head>
 <body>
-  <div id="sidebar-container"></div>
+    <div id="header-container"></div>
+    
+    <div class="settings-container">
+        <!-- 1. Режим обслуживания -->
+        <div class="settings-card">
+            <h2><i class="fas fa-tools"></i> Режим обслуживания</h2>
+            <div class="toggle-wrapper">
+                <span>Включить технический доступ</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="maint-enabled">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div style="margin-top: 20px;">
+                <label>Текст заглушки (поддерживает HTML)</label>
+                <textarea id="maint-text" placeholder="<h2>Сайт на реконструкции</h2><p>Мы скоро вернемся!</p>"></textarea>
+            </div>
+        </div>
 
-  <main class="main-content">
-    <div class="page-header">
-      <h1 class="page-title">Настройки сайта</h1>
+        <!-- 2. Бегущая строка -->
+        <div class="settings-card">
+            <h2><i class="fas fa-tv"></i> Бегущая строка</h2>
+            <div class="toggle-wrapper">
+                <span>Показывать бегущую строку</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="ticker-enabled">
+                    <span class="slider"></span>
+            </label>
+            </div>
+            <div class="form-row" style="margin-top: 20px;">
+                <div>
+                    <label>Скорость прокрутки (секунды на полный круг)</label>
+                    <input type="number" id="ticker-speed" min="5" max="120" value="30">
+                </div>
+                <div>
+                    <label>Режим заполнения</label>
+                    <select id="ticker-mode">
+                        <option value="auto">Авто (последние 5 новостей)</option>
+                        <option value="custom">Свой текст</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top: 15px;">
+                <label>Кастомный текст (если выбран режим "Свой текст")</label>
+                <input type="text" id="ticker-custom" placeholder="Введите текст бегущей строки...">
+            </div>
+        </div>
+
+        <!-- 3. Белый список доступа -->
+        <div class="settings-card">
+            <h2><i class="fas fa-user-shield"></i> Белый список (Maintenance Allowlist)</h2>
+            <p style="color: var(--text-muted); margin-bottom: 15px; font-size: 0.9rem;">Пользователи из этого списка смогут заходить на сайт даже при включенном режиме обслуживания.</p>
+            
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="wl-email" placeholder="Введите email пользователя..." style="flex: 1;">
+                <button onclick="addToWhitelist()" class="btn-save" style="padding: 12px 20px;"><i class="fas fa-plus"></i> Добавить</button>
+            </div>
+            <div class="whitelist-tags" id="wl-container"></div>
+        </div>
+
+        <div style="text-align: right; margin-bottom: 60px;">
+            <button onclick="saveAllSettings()" class="btn-save"><i class="fas fa-save"></i> Сохранить все настройки</button>
+        </div>
     </div>
 
-    <div class="card">
-      <h3 style="margin-bottom: 20px; font-family: 'Montserrat';">Бегущая строка</h3>
-      <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-        <input type="checkbox" id="ticker-enabled" style="width: 20px; height: 20px; cursor: pointer;">
-        <label for="ticker-enabled" style="margin: 0; cursor: pointer; font-weight: 600;">Показывать бегущую строку</label>
-      </div>
-      <div class="form-group">
-        <label>Текст бегущей строки (если пусто — последние новости)</label>
-        <input type="text" id="ticker-text" class="form-control" placeholder="Например: Срочные новости!">
-      </div>
-      <button onclick="saveSettings()" class="btn-create" style="margin-top: 15px;">Сохранить настройки</button>
-    </div>
+    <script type="module">
+        import { renderHeader } from '../header.js';
+        import { db, auth } from '../firebase-config.js';
+        import { showToast, showConfirm } from '../ui.js';
+        import { getDoc, doc, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    <!-- БЛОК РЕЖИМА ОБСЛУЖИВАНИЯ -->
-    <div class="card" style="margin-top: 20px; border: 2px solid #ef4444;">
-      <h3 style="margin-bottom: 20px; font-family: 'Montserrat'; color: #ef4444;">Режим обслуживания</h3>
-      <p style="color: var(--text-muted); margin-bottom: 20px;">Если включить, сайт увидят только администраторы. Все остальные увидят заглушку.</p>
-      
-      <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-        <input type="checkbox" id="maintenance-enabled" style="width: 20px; height: 20px; cursor: pointer; accent-color: #ef4444;">
-        <label for="maintenance-enabled" style="margin: 0; cursor: pointer; font-weight: 600; color: #ef4444;">Включить режим обслуживания</label>
-      </div>
-      <button onclick="saveMaintenance()" class="btn-create" style="background: #ef4444; color: white;">Применить</button>
-    </div>
-  </main>
+        renderHeader();
 
-  <script type="module">
-    import { renderSidebar } from './sidebar.js';
-    import { firebaseConfig } from '../firebase-config.js';
-    import { showToast } from '../ui.js';
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        // Проверка прав админа
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.href = '/kemerovo42-site/admin/login.html'; return; }
+            const token = await user.getIdTokenResult();
+            if (!token.claims.admin) { 
+                showToast("У вас нет прав администратора", 'error');
+                setTimeout(() => window.location.href = '/kemerovo42-site/index.html', 2000);
+            } else {
+                loadSettings();
+            }
+        });
 
-    renderSidebar('settings');
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+        let currentWhitelist = [];
 
-    async function loadSettings() {
-      try {
-        const tickerSnap = await getDoc(doc(db, "settings", "ticker"));
-        if (tickerSnap.exists()) {
-          document.getElementById('ticker-enabled').checked = tickerSnap.data().enabled !== false;
-          document.getElementById('ticker-text').value = tickerSnap.data().customText || '';
+        async function loadSettings() {
+            try {
+                // Загрузка Maintenance
+                const maintSnap = await getDoc(doc(db, "settings", "maintenance"));
+                if (maintSnap.exists()) {
+                    document.getElementById('maint-enabled').checked = maintSnap.data().enabled || false;
+                    document.getElementById('maint-text').value = maintSnap.data().text || '';
+                }
+
+                // Загрузка Ticker
+                const tickerSnap = await getDoc(doc(db, "settings", "ticker"));
+                if (tickerSnap.exists()) {
+                    const tData = tickerSnap.data();
+                    document.getElementById('ticker-enabled').checked = tData.enabled !== false;
+                    document.getElementById('ticker-speed').value = tData.speed || 30;
+                    document.getElementById('ticker-mode').value = tData.mode || 'auto';
+                    document.getElementById('ticker-custom').value = tData.customText || '';
+                    
+                    // Применяем скорость сразу для предпросмотра
+                    applyTickerSpeed(tData.speed || 30);
+                }
+
+                // Загрузка WhiteList
+                const wlSnap = await getDoc(doc(db, "settings", "maintenance_whitelist"));
+                if (wlSnap.exists()) {
+                    currentWhitelist = wlSnap.data().uids || [];
+                    renderWhitelistTags();
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Ошибка загрузки настроек", 'error');
+            }
         }
 
-        const maintSnap = await getDoc(doc(db, "settings", "maintenance"));
-        if (maintSnap.exists()) {
-          document.getElementById('maintenance-enabled').checked = maintSnap.data().enabled === true;
+        function applyTickerSpeed(seconds) {
+            const style = document.getElementById('dynamic-ticker-style') || document.createElement('style');
+            style.id = 'dynamic-ticker-style';
+            style.innerHTML = `@keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } } .ticker { animation-duration: ${seconds}s !important; }`;
+            document.head.appendChild(style);
         }
-      } catch (e) { console.error(e); }
-    }
-    loadSettings();
 
-    window.saveSettings = async function() {
-      const enabled = document.getElementById('ticker-enabled').checked;
-      const customText = document.getElementById('ticker-text').value.trim();
-      try {
-        await setDoc(doc(db, "settings", "ticker"), { enabled: enabled, customText: customText });
-        showToast('Настройки бегущей строки сохранены!', 'success');
-      } catch (e) { showToast('Ошибка сохранения', 'error'); }
-    };
+        document.getElementById('ticker-speed').addEventListener('input', (e) => {
+            applyTickerSpeed(e.target.value);
+        });
 
-    window.saveMaintenance = async function() {
-      const enabled = document.getElementById('maintenance-enabled').checked;
-      try {
-        await setDoc(doc(db, "settings", "maintenance"), { enabled: enabled });
-        showToast(enabled ? 'Режим обслуживания ВКЛЮЧЕН' : 'Режим обслуживания ВЫКЛЮЧЕН', 'success');
-      } catch (e) { showToast('Ошибка', 'error'); }
-    };
-  </script>
+        async function addToWhitelist() {
+            const email = document.getElementById('wl-email').value.trim();
+            if (!email) return showToast("Введите email", 'error');
+
+            try {
+                const q = query(collection(db, "users"), where("email", "==", email));
+                const snap = await getDocs(q);
+                
+                if (snap.empty) return showToast("Пользователь с таким email не найден", 'error');
+                
+                const uid = snap.docs[0].id;
+                if (currentWhitelist.includes(uid)) return showToast("Этот пользователь уже в списке", 'info');
+
+                await updateDoc(doc(db, "settings", "maintenance_whitelist"), { uids: arrayUnion(uid) }, { merge: true });
+                currentWhitelist.push(uid);
+                renderWhitelistTags();
+                document.getElementById('wl-email').value = '';
+                showToast("Пользователь добавлен в белый список", 'success');
+            } catch (e) {
+                showToast("Ошибка поиска пользователя", 'error');
+            }
+        }
+
+        async function removeFromWhitelist(uid) {
+            showConfirm("Удалить из белого списка?", "Пользователь потеряет доступ во время техработ.", async () => {
+                await updateDoc(doc(db, "settings", "maintenance_whitelist"), { uids: arrayRemove(uid) });
+                currentWhitelist = currentWhitelist.filter(id => id !== uid);
+                renderWhitelistTags();
+                showToast("Пользователь удален", 'success');
+            });
+        }
+
+        async function renderWhitelistTags() {
+            const container = document.getElementById('wl-container');
+            container.innerHTML = '';
+            
+            // Получаем имена пользователей для красивого отображения
+            for (const uid of currentWhitelist) {
+                try {
+                    const uSnap = await getDoc(doc(db, "users", uid));
+                    const userData = uSnap.exists() ? uSnap.data() : { displayName: uid.slice(0,8)+'...' };
+                    const name = userData.displayName || userData.email || uid;
+                    
+                    const tag = document.createElement('div');
+                    tag.className = 'wl-tag';
+                    tag.innerHTML = `<span>${name}</span> <button onclick="removeFromWhitelist('${uid}')">&times;</button>`;
+                    container.appendChild(tag);
+                } catch(e) {}
+            }
+            
+            if (currentWhitelist.length === 0) {
+                container.innerHTML = '<span style="color: var(--text-muted); font-size: 0.9rem;">Список пуст</span>';
+            }
+        }
+
+        window.saveAllSettings = async function() {
+            const btn = document.querySelector('.btn-save');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
+
+            try {
+                // Сохраняем Maintenance
+                await setDoc(doc(db, "settings", "maintenance"), {
+                    enabled: document.getElementById('maint-enabled').checked,
+                    text: document.getElementById('maint-text').value
+                }, { merge: true });
+
+                // Сохраняем Ticker
+                await setDoc(doc(db, "settings", "ticker"), {
+                    enabled: document.getElementById('ticker-enabled').checked,
+                    speed: Number(document.getElementById('ticker-speed').value),
+                    mode: document.getElementById('ticker-mode').value,
+                    customText: document.getElementById('ticker-custom').value
+                }, { merge: true });
+
+                showToast("Все настройки успешно сохранены!", 'success');
+            } catch (e) {
+                console.error(e);
+                showToast("Ошибка сохранения", 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Сохранить все настройки';
+            }
+        };
+    </script>
 </body>
 </html>
