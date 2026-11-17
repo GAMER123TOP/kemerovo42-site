@@ -1,17 +1,12 @@
-import { firebaseConfig } from './firebase-config.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+import { db, auth } from './firebase-config.js';
+import { getDoc, doc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 export function renderHeader() {
     const container = document.getElementById('header-container');
     if (!container) return;
 
-    // --- ПРЕДЗАГРУЗКА ШРИФТОВ ДЛЯ СКОРОСТИ ---
+    // --- ПРЕДЗАГРУЗКА ШРИФТОВ (если еще не добавлены в HTML) ---
     if (!document.querySelector('link[href="https://fonts.googleapis.com"]')) {
         const preconnect1 = document.createElement('link');
         preconnect1.rel = 'preconnect';
