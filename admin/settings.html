@@ -16,18 +16,27 @@
 
     <div class="card">
       <h3 style="margin-bottom: 20px; font-family: 'Montserrat';">Бегущая строка</h3>
-      
       <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
         <input type="checkbox" id="ticker-enabled" style="width: 20px; height: 20px; cursor: pointer;">
-        <label for="ticker-enabled" style="margin: 0; cursor: pointer; font-weight: 600;">Показывать бегущую строку на сайте</label>
+        <label for="ticker-enabled" style="margin: 0; cursor: pointer; font-weight: 600;">Показывать бегущую строку</label>
       </div>
-
       <div class="form-group">
-        <label>Текст бегущей строки (если пусто — будут крутиться последние новости)</label>
-        <input type="text" id="ticker-text" class="form-control" placeholder="Например: Срочные новости! Читайте нас...">
+        <label>Текст бегущей строки (если пусто — последние новости)</label>
+        <input type="text" id="ticker-text" class="form-control" placeholder="Например: Срочные новости!">
       </div>
-
       <button onclick="saveSettings()" class="btn-create" style="margin-top: 15px;">Сохранить настройки</button>
+    </div>
+
+    <!-- БЛОК РЕЖИМА ОБСЛУЖИВАНИЯ -->
+    <div class="card" style="margin-top: 20px; border: 2px solid #ef4444;">
+      <h3 style="margin-bottom: 20px; font-family: 'Montserrat'; color: #ef4444;">Режим обслуживания</h3>
+      <p style="color: var(--text-muted); margin-bottom: 20px;">Если включить, сайт увидят только администраторы. Все остальные увидят заглушку.</p>
+      
+      <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+        <input type="checkbox" id="maintenance-enabled" style="width: 20px; height: 20px; cursor: pointer; accent-color: #ef4444;">
+        <label for="maintenance-enabled" style="margin: 0; cursor: pointer; font-weight: 600; color: #ef4444;">Включить режим обслуживания</label>
+      </div>
+      <button onclick="saveMaintenance()" class="btn-create" style="background: #ef4444; color: white;">Применить</button>
     </div>
   </main>
 
@@ -42,38 +51,37 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Загружаем текущие настройки
     async function loadSettings() {
       try {
-        const docSnap = await getDoc(doc(db, "settings", "ticker"));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          document.getElementById('ticker-enabled').checked = data.enabled !== false; // По умолчанию включено
-          document.getElementById('ticker-text').value = data.customText || '';
-        } else {
-            document.getElementById('ticker-enabled').checked = true; // Если нет настроек, включаем
+        const tickerSnap = await getDoc(doc(db, "settings", "ticker"));
+        if (tickerSnap.exists()) {
+          document.getElementById('ticker-enabled').checked = tickerSnap.data().enabled !== false;
+          document.getElementById('ticker-text').value = tickerSnap.data().customText || '';
         }
-      } catch (e) {
-        console.error("Ошибка загрузки настроек:", e);
-      }
+
+        const maintSnap = await getDoc(doc(db, "settings", "maintenance"));
+        if (maintSnap.exists()) {
+          document.getElementById('maintenance-enabled').checked = maintSnap.data().enabled === true;
+        }
+      } catch (e) { console.error(e); }
     }
     loadSettings();
 
-    // Сохраняем настройки
     window.saveSettings = async function() {
       const enabled = document.getElementById('ticker-enabled').checked;
       const customText = document.getElementById('ticker-text').value.trim();
-
       try {
-        await setDoc(doc(db, "settings", "ticker"), {
-          enabled: enabled,
-          customText: customText
-        });
-        showToast('Настройки сохранены!', 'success');
-      } catch (e) {
-        console.error(e);
-        showToast('Ошибка сохранения', 'error');
-      }
+        await setDoc(doc(db, "settings", "ticker"), { enabled: enabled, customText: customText });
+        showToast('Настройки бегущей строки сохранены!', 'success');
+      } catch (e) { showToast('Ошибка сохранения', 'error'); }
+    };
+
+    window.saveMaintenance = async function() {
+      const enabled = document.getElementById('maintenance-enabled').checked;
+      try {
+        await setDoc(doc(db, "settings", "maintenance"), { enabled: enabled });
+        showToast(enabled ? 'Режим обслуживания ВКЛЮЧЕН' : 'Режим обслуживания ВЫКЛЮЧЕН', 'success');
+      } catch (e) { showToast('Ошибка', 'error'); }
     };
   </script>
 </body>
