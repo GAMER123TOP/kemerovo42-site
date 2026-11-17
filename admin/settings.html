@@ -3,58 +3,54 @@
 <head>
   <meta charset="utf-8" />
   <title>Настройки | Кемерово 42</title>
+  <!-- Подключаем ТВОЙ стиль админки -->
   <link rel="stylesheet" href="admin-style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
-    /* Минимальные дополнения для форм внутри .card */
+    /* Минимальные стили ТОЛЬКО для элементов, которых нет в admin-style.css */
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
     @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } }
     
-    .form-group { margin-bottom: 20px; }
-    
-    label { 
-        display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.85rem; 
-        color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; 
+    .toggle-wrapper { 
+        display: flex; align-items: center; justify-content: space-between; 
+        margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid var(--border); 
     }
     
-    input[type="text"], input[type="number"], textarea, select { 
-        width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; 
-        font-family: inherit; font-size: 0.95rem; background: white; color: var(--text-main);
-        transition: all 0.2s; box-sizing: border-box;
+    /* Кастомный тоггл, адаптированный под тему */
+    .toggle-switch { position: relative; width: 50px; height: 26px; display: inline-block; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { 
+        position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; 
+        background-color: #cbd5e1; transition: .4s; border-radius: 34px; 
     }
-    input:focus, textarea:focus, select:focus { 
-        outline: none; border-color: var(--accent); 
-        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15); 
+    body.dark-theme .slider { background-color: #334155; } /* Темный фон тоггла */
+    .slider:before { 
+        position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; 
+        background-color: white; transition: .4s; border-radius: 50%; 
     }
-    textarea { resize: vertical; min-height: 120px; line-height: 1.5; }
-    
+    input:checked + .slider { background-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(24px); }
+
     /* Бейджи белого списка */
     .wl-tags-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; min-height: 40px; }
     .wl-badge { 
-        background: var(--bg-secondary); border: 1px solid var(--border); padding: 6px 12px; 
+        background: rgba(0,0,0,0.03); border: 1px solid var(--border); padding: 6px 12px; 
         border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; 
         color: var(--text-main); font-weight: 500;
     }
+    body.dark-theme .wl-badge { background: rgba(255,255,255,0.05); }
+    
     .wl-badge button { 
         background: none; border: none; color: #ef4444; cursor: pointer; 
         font-size: 1rem; line-height: 1; padding: 0; opacity: 0.7; transition: 0.2s;
     }
     .wl-badge button:hover { opacity: 1; transform: scale(1.1); }
-    
     .empty-wl { color: var(--text-muted); font-size: 0.9rem; font-style: italic; padding: 10px 0; }
-
-    /* Toggle switch */
-    .toggle-wrapper { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-    .toggle-switch { position: relative; width: 50px; height: 26px; display: inline-block; }
-    .toggle-switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px; }
-    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background-color: var(--accent); }
-    input:checked + .slider:before { transform: translateX(24px); }
   </style>
 </head>
 <body>
+  <!-- Подключаем ТВОЙ сайдбар -->
   <div id="sidebar-container"></div>
 
   <main class="main-content">
@@ -64,7 +60,7 @@
     </div>
 
     <!-- Карточка 1: Режим обслуживания -->
-    <div class="card" style="margin-bottom: 24px;">
+    <div class="card">
       <h3 style="margin-bottom: 20px; font-family: 'Unbounded'; font-size: 1.2rem; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-tools" style="color: var(--accent);"></i> Режим обслуживания
       </h3>
@@ -79,17 +75,17 @@
       
       <div class="form-group">
         <label>Текст заглушки (поддерживает HTML)</label>
-        <textarea id="maint-text" placeholder="<h2>Сайт на реконструкции</h2><p>Мы скоро вернемся!</p>"></textarea>
+        <textarea id="maint-text" class="form-control" placeholder="<h2>Сайт на реконструкции</h2><p>Мы скоро вернемся!</p>" rows="4"></textarea>
       </div>
     </div>
 
     <!-- Карточка 2: Бегущая строка -->
-    <div class="card" style="margin-bottom: 24px;">
+    <div class="card">
       <h3 style="margin-bottom: 20px; font-family: 'Unbounded'; font-size: 1.2rem; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-tv" style="color: var(--accent);"></i> Бегущая строка
       </h3>
       
-      <div class="toggle-wrapper">
+      <div class="toggle-wrapper" style="border-bottom: none; margin-bottom: 10px; padding-bottom: 0;">
         <span style="font-weight: 600; color: var(--text-main);">Показывать бегущую строку</span>
         <label class="toggle-switch">
           <input type="checkbox" id="ticker-enabled">
@@ -97,14 +93,14 @@
         </label>
       </div>
 
-      <div class="form-grid">
+      <div class="form-grid" style="margin-top: 20px;">
         <div class="form-group">
           <label>Скорость (секунды на круг)</label>
-          <input type="number" id="ticker-speed" min="5" max="120" value="30">
+          <input type="number" id="ticker-speed" class="form-control" min="5" max="120" value="30">
         </div>
         <div class="form-group">
           <label>Режим заполнения</label>
-          <select id="ticker-mode">
+          <select id="ticker-mode" class="form-control">
             <option value="auto">Авто (последние 5 новостей)</option>
             <option value="custom">Свой текст</option>
           </select>
@@ -113,12 +109,12 @@
       
       <div class="form-group">
         <label>Кастомный текст</label>
-        <input type="text" id="ticker-custom" placeholder="Введите текст бегущей строки...">
+        <input type="text" id="ticker-custom" class="form-control" placeholder="Введите текст бегущей строки...">
       </div>
     </div>
 
     <!-- Карточка 3: Белый список -->
-    <div class="card" style="margin-bottom: 24px;">
+    <div class="card">
       <h3 style="margin-bottom: 10px; font-family: 'Unbounded'; font-size: 1.2rem; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-user-shield" style="color: var(--accent);"></i> Белый список доступа
       </h3>
@@ -127,7 +123,7 @@
       </p>
       
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <input type="text" id="wl-email" placeholder="Email пользователя..." style="flex: 1;">
+        <input type="text" id="wl-email" class="form-control" placeholder="Email пользователя..." style="flex: 1;">
         <button onclick="addToWhitelist()" class="btn-create" style="padding: 12px 20px;">
           <i class="fas fa-plus"></i> Добавить
         </button>
@@ -139,16 +135,19 @@
   </main>
 
   <script type="module">
+    // Импорты точно такие же, как в твоей админке
     import { renderSidebar } from './sidebar.js';
     import { db, auth } from '../firebase-config.js';
     import { showToast, showConfirm } from '../ui.js';
     import { getDoc, doc, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { collection, getDocs, query, where, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+    // Рендерим сайдбар с активным пунктом 'settings'
     renderSidebar('settings');
 
     let currentWhitelist = [];
 
+    // Проверка прав админа
     onAuthStateChanged(auth, async (user) => {
       if (!user) { window.location.href = '/kemerovo42-site/admin/login.html'; return; }
       const token = await user.getIdTokenResult();
@@ -162,12 +161,14 @@
 
     async function loadSettings() {
       try {
+        // Загрузка Maintenance
         const maintSnap = await getDoc(doc(db, "settings", "maintenance"));
         if (maintSnap.exists()) {
           document.getElementById('maint-enabled').checked = maintSnap.data().enabled || false;
           document.getElementById('maint-text').value = maintSnap.data().text || '';
         }
 
+        // Загрузка Ticker
         const tickerSnap = await getDoc(doc(db, "settings", "ticker"));
         if (tickerSnap.exists()) {
           const tData = tickerSnap.data();
@@ -177,6 +178,7 @@
           document.getElementById('ticker-custom').value = tData.customText || '';
         }
 
+        // Загрузка Whitelist
         const wlSnap = await getDoc(doc(db, "settings", "maintenance_whitelist"));
         if (wlSnap.exists()) {
           currentWhitelist = wlSnap.data().uids || [];
