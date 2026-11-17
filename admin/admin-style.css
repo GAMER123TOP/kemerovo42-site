@@ -245,5 +245,65 @@ body.dark-theme .badge-published { background: #052e16; color: #86efac; }
 
 /* Стили для Quill в темной теме */
 body.dark-theme .ql-toolbar { background: var(--card-bg); border-color: var(--border) !important; }
+
+/* Фикс чёрной темы в админке */
+
+/* 1. Поля ввода (input, select, textarea) */
+body.dark-theme input, 
+body.dark-theme select, 
+body.dark-theme textarea,
+body.dark-theme .form-control {
+    background-color: #0f172a !important; /* Темный фон */
+    color: #ffffff !important; /* Белый текст */
+    border-color: #334155 !important;
+}
+
+/* 2. Плейсхолдеры (текст-подсказка внутри полей) */
+body.dark-theme input::placeholder,
+body.dark-theme textarea::placeholder {
+    color: #64748b !important; /* Серый, но видимый */
+}
+
+/* 3. Чекбоксы и их подписи (Рубрики) */
+body.dark-theme .tag-checkbox {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #ffffff !important;
+}
+body.dark-theme .tag-checkbox span {
+    color: #ffffff !important;
+}
+
+/* 4. Карточки (чтобы текст в них был светлым) */
+body.dark-theme .card,
+body.dark-theme .guide-card {
+    background-color: #171717 !important;
+    color: #ffffff !important;
+}
+
+/* 5. Весь текст внутри карточек (Памятка, формы) */
+body.dark-theme .card p, 
+body.dark-theme .card li, 
+body.dark-theme .card h2, 
+body.dark-theme .card h3,
+body.dark-theme .card label {
+    color: #e2e8f0 !important;
+}
+
+/* 6. Редактор Quill */
+body.dark-theme .ql-toolbar {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+body.dark-theme .ql-container {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+}
+body.dark-theme .ql-editor {
+    color: #ffffff !important;
+}
+body.dark-theme .ql-editor.ql-blank::before {
+    color: #64748b !important; /* Цвет подсказки "Начните писать текст" */
+}
 body.dark-theme .ql-container { border-color: var(--border) !important; background: var(--card-bg); color: var(--text-main); }
 body.dark-theme .ql-editor { color: var(--text-main); }
