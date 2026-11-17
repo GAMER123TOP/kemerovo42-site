@@ -45,14 +45,11 @@
 
     <script type="module">
         import { renderHeader } from './header.js';
-        import { firebaseConfig } from './firebase-config.js';
-        import { showToast } from './ui.js'; // <-- ИМПОРТ
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { db } from './firebase-config.js'; // <-- БЕРЕМ ГОТОВЫЕ!
+        import { showToast } from './ui.js';
+        import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         renderHeader();
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
 
         document.getElementById('suggest-form').addEventListener('submit', async (e) => {
             e.preventDefault();
