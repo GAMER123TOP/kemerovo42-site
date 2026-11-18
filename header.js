@@ -2,32 +2,17 @@ import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { checkMaintenance } from './guard.js'; // <-- ИМПОРТ ЗАЩИТЫ
+import { checkMaintenance } from './guard.js';
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
 export function renderHeader() {
-    // --- ЗАПУСКАЕМ ПРОВЕРКУ РЕЖИМА ОБСЛУЖИВАНИЯ ---
-    checkMaintenance(); 
+    checkMaintenance();
 
     const container = document.getElementById('header-container');
     if (!container) return;
-
-    // Предзагрузка шрифтов
-    if (!document.querySelector('link[href="https://fonts.googleapis.com"]')) {
-        const preconnect1 = document.createElement('link');
-        preconnect1.rel = 'preconnect';
-        preconnect1.href = 'https://fonts.googleapis.com';
-        document.head.appendChild(preconnect1);
-
-        const preconnect2 = document.createElement('link');
-        preconnect2.rel = 'preconnect';
-        preconnect2.href = 'https://fonts.gstatic.com';
-        preconnect2.crossOrigin = 'anonymous';
-        document.head.appendChild(preconnect2);
-    }
 
     const siteTheme = localStorage.getItem('theme') || 'light';
     if (siteTheme === 'dark') document.body.classList.add('dark-theme');
@@ -37,28 +22,40 @@ export function renderHeader() {
           <div class="ticker" id="ticker-content">Загрузка...</div>
       </div>
 
-      <header id="main-header">
-        <div class="header-container">
-            <div class="logo">
-                <a href="/kemerovo42-site/index.html" style="text-decoration: none; color: white;">
-                    <h1>КЕМЕРОВО <span>42</span></h1>
+      <header id="main-header" style="padding: 0 20px;">
+        <div class="header-container" style="display: flex; align-items: center; justify-content: space-between; gap: 20px;">
+            
+            <!-- ЛОГОТИП -->
+            <div class="logo" style="flex-shrink: 0;">
+                <a href="/kemerovo42-site/index.html" style="text-decoration: none; color: white; display: block;">
+                    <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800;">КЕМЕРОВО <span>42</span></h1>
+                    <p style="margin: 0; font-size: 0.7rem; color: #94a3b8; letter-spacing: 2px;">ОФИЦИАЛЬНЫЙ НОВОСТНОЙ ПОРТАЛ</p>
                 </a>
-                <p>Официальный новостной портал</p>
             </div>
 
-            <div class="search-container" style="margin-left: auto; margin-right: 15px; display: flex; align-items: center;">
-                <input type="text" id="search-input" placeholder="Поиск..." style="display: none; padding: 8px 12px; border-radius: 20px; border: none; outline: none; margin-right: 10px; font-family: inherit; background: rgba(255,255,255,0.1); color: white; width: 200px;" onkeypress="if(event.key === 'Enter') window.location.href='/kemerovo42-site/search.html?q=' + encodeURIComponent(this.value)">
-                <button onclick="document.getElementById('search-input').style.display = document.getElementById('search-input').style.display === 'block' ? 'none' : 'block'" style="background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer; padding: 5px;"><i class="fas fa-search"></i></button>
-            </div>
-            
-            <div class="auth-buttons" id="auth-buttons">
-                <a href="/kemerovo42-site/suggest.html" class="btn-outline"><i class="fas fa-bullhorn"></i> Предложить</a>
-                <a href="/kemerovo42-site/admin/login.html" id="login-btn" class="btn-outline">Войти</a>
+            <!-- ПРАВАЯ ЧАСТЬ (Кнопки) -->
+            <div style="display: flex; align-items: center; gap: 15px; flex-shrink: 0;">
                 
+                <!-- Поиск (Иконка) -->
+                <div style="display: flex; align-items: center;">
+                    <input type="text" id="search-input" placeholder="Поиск..." style="display: none; padding: 8px 12px; border-radius: 20px; border: 1px solid #334155; outline: none; background: #0f172a; color: white; width: 200px; margin-right: 10px;" onkeypress="if(event.key === 'Enter') window.location.href='/kemerovo42-site/search.html?q=' + encodeURIComponent(this.value)">
+                    <button onclick="document.getElementById('search-input').style.display = document.getElementById('search-input').style.display === 'block' ? 'none' : 'block'" style="background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer; padding: 5px;"><i class="fas fa-search"></i></button>
+                </div>
+
+                <!-- Кнопка Предложить -->
+                <a href="/kemerovo42-site/suggest.html" style="text-decoration: none; color: white; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; transition: 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='white'">
+                    <i class="fas fa-bullhorn"></i> Предложить
+                </a>
+
+                <!-- Кнопка Войти (если не залогинен) -->
+                <a href="/kemerovo42-site/admin/login.html" id="login-btn" style="text-decoration: none; color: white; font-weight: 600; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.2); padding: 6px 16px; border-radius: 6px; transition: 0.2s;">Войти</a>
+
+                <!-- Меню профиля (если залогинен) -->
                 <div id="user-menu" style="display: none; position: relative;">
-                    <button onclick="document.getElementById('dropdown').style.display = document.getElementById('dropdown').style.display === 'block' ? 'none' : 'block'" style="background: rgba(255,255,255,0.1); border: none; border-radius: 30px; padding: 4px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: white;">
-                        <img id="header-avatar" src="" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
-                        <span id="header-username" style="font-weight: 600; font-size: 0.9rem; padding-right: 8px;">Профиль</span>
+                    <button onclick="document.getElementById('dropdown').style.display = document.getElementById('dropdown').style.display === 'block' ? 'none' : 'block'" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 4px 12px 4px 4px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: white;">
+                        <img id="header-avatar" src="" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; display: none;">
+                        <span id="header-username" style="font-weight: 600; font-size: 0.85rem;">Профиль</span>
+                        <i class="fas fa-chevron-down" style="font-size: 0.7rem; color: #94a3b8;"></i>
                     </button>
                     <div id="dropdown" style="display: none; position: absolute; right: 0; top: 45px; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); min-width: 180px; overflow: hidden; z-index: 1000;">
                         <a href="/kemerovo42-site/admin/index.html" style="display: block; padding: 12px 15px; text-decoration: none; color: #0f172a; font-weight: 500; border-bottom: 1px solid #e2e8f0;"><i class="fas fa-tachometer-alt" style="width: 20px;"></i> Админка</a>
@@ -67,13 +64,16 @@ export function renderHeader() {
                     </div>
                 </div>
 
-                <button id="theme-toggle"><i class="fas fa-moon"></i></button>
+                <!-- Кнопка темы -->
+                <button id="theme-toggle" style="background: rgba(255,255,255,0.1); border: none; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; transition: 0.2s;">
+                    <i class="fas fa-moon"></i>
+                </button>
             </div>
         </div>
       </header>
     `;
 
-    // --- ЛОГИКА БЕГУЩЕЙ СТРОКИ (С УЧЕТОМ НАСТРОЕК) ---
+    // Логика бегущей строки
     const tickerWrap = document.getElementById('ticker-wrap');
     const tickerContent = document.getElementById('ticker-content');
 
@@ -83,17 +83,14 @@ export function renderHeader() {
             if (tickerSnap.exists() && tickerSnap.data().enabled === false) return;
 
             let textToShow = '';
-            let speed = 25; // Скорость по умолчанию
+            let speed = 25;
 
             if (tickerSnap.exists()) {
                 const tData = tickerSnap.data();
-                if (tData.mode === 'custom' && tData.customText) {
-                    textToShow = tData.customText;
-                }
+                if (tData.mode === 'custom' && tData.customText) textToShow = tData.customText;
                 if (tData.speed) speed = tData.speed;
             }
 
-            // Если текст пустой (режим авто), грузим новости
             if (!textToShow) {
                 const snapshot = await getDocs(query(collection(db, "news"), orderBy("date", "desc"), limit(5)));
                 if (!snapshot.empty) {
@@ -105,26 +102,12 @@ export function renderHeader() {
 
             if (textToShow) {
                 tickerContent.innerText = textToShow;
-                // Применяем скорость из настроек
                 tickerContent.style.animationDuration = `${speed}s`;
                 tickerWrap.style.display = 'block';
             }
-        } catch (e) {
-            console.error("Ошибка загрузки бегущей строки:", e);
-        }
+        } catch (e) { console.error(e); }
     }
     loadTicker();
-
-    window.addEventListener('scroll', () => {
-        const header = document.getElementById('main-header');
-        if (window.scrollY > 50) {
-            header.style.background = 'rgba(15, 23, 42, 0.85)';
-            header.style.backdropFilter = 'blur(10px)';
-        } else {
-            header.style.background = 'var(--header-bg)';
-            header.style.backdropFilter = 'none';
-        }
-    });
 
     document.addEventListener('click', (e) => {
         const menu = document.getElementById('user-menu');
@@ -164,8 +147,13 @@ export function renderHeader() {
                 const docSnap = await getDoc(doc(db, "users", user.uid));
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if (data.photoURL) headerAvatar.src = data.photoURL;
-                    else if (data.displayName) headerAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName)}&background=d4af37&color=0f172a&bold=true`;
+                    if (data.photoURL) {
+                        headerAvatar.src = data.photoURL;
+                        headerAvatar.style.display = 'block';
+                    } else if (data.displayName) {
+                        headerAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName)}&background=d4af37&color=0f172a&bold=true`;
+                        headerAvatar.style.display = 'block';
+                    }
                 }
             } catch (e) {}
         } else {
