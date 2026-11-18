@@ -1,12 +1,21 @@
-import { db, auth } from './firebase-config.js';
-import { getDoc, doc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { firebaseConfig } from './firebase-config.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { checkMaintenance } from './guard.js'; // <-- ИМПОРТ ЗАЩИТЫ
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
 export function renderHeader() {
+    // --- ЗАПУСКАЕМ ПРОВЕРКУ РЕЖИМА ОБСЛУЖИВАНИЯ ---
+    checkMaintenance(); 
+
     const container = document.getElementById('header-container');
     if (!container) return;
 
-    // --- ПРЕДЗАГРУЗКА ШРИФТОВ ДЛЯ СКОРОСТИ ---
+    // Предзагрузка шрифтов
     if (!document.querySelector('link[href="https://fonts.googleapis.com"]')) {
         const preconnect1 = document.createElement('link');
         preconnect1.rel = 'preconnect';
@@ -53,7 +62,6 @@ export function renderHeader() {
                     </button>
                     <div id="dropdown" style="display: none; position: absolute; right: 0; top: 45px; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); min-width: 180px; overflow: hidden; z-index: 1000;">
                         <a href="/kemerovo42-site/admin/index.html" style="display: block; padding: 12px 15px; text-decoration: none; color: #0f172a; font-weight: 500; border-bottom: 1px solid #e2e8f0;"><i class="fas fa-tachometer-alt" style="width: 20px;"></i> Админка</a>
-                        <a href="/kemerovo42-site/admin/settings.html" style="display: block; padding: 12px 15px; text-decoration: none; color: #0f172a; font-weight: 500; border-bottom: 1px solid #e2e8f0;"><i class="fas fa-cog" style="width: 20px;"></i> Настройки</a>
                         <a href="/kemerovo42-site/admin/profile.html" style="display: block; padding: 12px 15px; text-decoration: none; color: #0f172a; font-weight: 500; border-bottom: 1px solid #e2e8f0;"><i class="fas fa-user" style="width: 20px;"></i> Мой профиль</a>
                         <button onclick="logoutUser()" style="width: 100%; text-align: left; padding: 12px 15px; background: none; border: none; color: #ef4444; font-weight: 500; cursor: pointer;"><i class="fas fa-sign-out-alt" style="width: 20px;"></i> Выйти</button>
                     </div>
@@ -65,31 +73,33 @@ export function renderHeader() {
       </header>
     `;
 
+    // --- ЛОГИКА БЕГУЩЕЙ СТРОКИ (С УЧЕТОМ НАСТРОЕК) ---
     const tickerWrap = document.getElementById('ticker-wrap');
     const tickerContent = document.getElementById('ticker-content');
 
     async function loadTicker() {
         try {
             const tickerSnap = await getDoc(doc(db, "settings", "ticker"));
-            
             if (tickerSnap.exists() && tickerSnap.data().enabled === false) return;
 
             let textToShow = '';
-            let speed = 30; // Дефолтная скорость
-            
+            let speed = 25; // Скорость по умолчанию
+
             if (tickerSnap.exists()) {
                 const tData = tickerSnap.data();
-                speed = tData.speed || 30;
-
                 if (tData.mode === 'custom' && tData.customText) {
                     textToShow = tData.customText;
-                } else {
-                    const snapshot = await getDocs(query(collection(db, "news"), orderBy("date", "desc"), limit(5)));
-                    if (!snapshot.empty) {
-                        let titles = [];
-                        snapshot.forEach(d => titles.push(d.data().title));
-                        textToShow = titles.join(' • ') + ' • ';
-                    }
+                }
+                if (tData.speed) speed = tData.speed;
+            }
+
+            // Если текст пустой (режим авто), грузим новости
+            if (!textToShow) {
+                const snapshot = await getDocs(query(collection(db, "news"), orderBy("date", "desc"), limit(5)));
+                if (!snapshot.empty) {
+                    let titles = [];
+                    snapshot.forEach(doc => titles.push(doc.data().title));
+                    textToShow = titles.join(' • ') + ' • ';
                 }
             }
 
