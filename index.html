@@ -27,21 +27,11 @@
         <main class="main-content">
             <div id="news-container">
                 <!-- Скелетон -->
-                <div class="hero-news" style="pointer-events: none;">
-                    <div style="width: 100%; height: 460px; background: #e2e8f0; animation: pulse 1.5s infinite;"></div>
+                <div class="hero-news" style="pointer-events: none; grid-column: span 2;">
+                    <div style="width: 100%; height: 480px; background: #e2e8f0; animation: pulse 1.5s infinite;"></div>
                     <div class="hero-text">
                         <div style="width: 100px; height: 20px; background: #e2e8f0; border-radius: 4px; margin-bottom: 15px; animation: pulse 1.5s infinite;"></div>
                         <div style="width: 80%; height: 40px; background: #e2e8f0; border-radius: 8px; margin-bottom: 15px; animation: pulse 1.5s infinite;"></div>
-                        <div style="width: 60%; height: 20px; background: #e2e8f0; border-radius: 4px; animation: pulse 1.5s infinite;"></div>
-                    </div>
-                </div>
-                <div class="news-grid">
-                    <div class="news-card" style="pointer-events: none;">
-                        <div style="width: 100%; height: 200px; background: #e2e8f0; animation: pulse 1.5s infinite;"></div>
-                        <div class="card-content">
-                            <div style="width: 80%; height: 24px; background: #e2e8f0; border-radius: 4px; margin-bottom: 10px; animation: pulse 1.5s infinite;"></div>
-                            <div style="width: 100%; height: 16px; background: #e2e8f0; border-radius: 4px; animation: pulse 1.5s infinite;"></div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -69,11 +59,15 @@
 
     <script type="module">
         import { renderHeader } from './header.js';
-        import { db, auth } from './firebase-config.js';
-        import { collection, getDocs, query, orderBy, limit, startAfter, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         renderHeader();
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
         
         const newsContainer = document.getElementById('news-container');
         const loadMoreBtn = document.getElementById('load-more-btn');
@@ -103,9 +97,9 @@
             try {
                 let q;
                 if (isFirstLoad) {
-                    q = query(collection(db, "news"), orderBy("date", "desc"), limit(NEWS_PER_PAGE));
+                    q = query(collection(db, "news"), where("status", "==", "published"), orderBy("date", "desc"), limit(NEWS_PER_PAGE));
                 } else if (lastVisible) {
-                    q = query(collection(db, "news"), orderBy("date", "desc"), startAfter(lastVisible), limit(NEWS_PER_PAGE));
+                    q = query(collection(db, "news"), where("status", "==", "published"), orderBy("date", "desc"), startAfter(lastVisible), limit(NEWS_PER_PAGE));
                 } else {
                     return;
                 }
@@ -113,7 +107,7 @@
                 const snapshot = await getDocs(q);
                 if (snapshot.empty) { 
                     loadMoreBtn.style.display = 'none'; 
-                    if (isFirstLoad) newsContainer.innerHTML = '<div style="text-align: center; padding: 60px 20px; background: var(--card-bg); border-radius: 16px;"><h3 style="color: var(--text-muted);">Новостей пока нет</h3></div>';
+                    if (isFirstLoad) newsContainer.innerHTML = '<div style="text-align: center; padding: 60px 20px; background: var(--card-bg); border-radius: 16px; grid-column: span 2;"><h3 style="color: var(--text-muted);">Новостей пока нет</h3></div>';
                     return; 
                 }
 
@@ -134,7 +128,6 @@
                 snapshot.forEach((doc, index) => {
                     const data = doc.data();
                     
-                    // ПРОПУСКАЕМ ЧЕРНОВИКИ И АРХИВ
                     if (data.status === 'draft' || data.status === 'archived') return;
 
                     let dateStr = formatDateTime(data.date);
@@ -142,33 +135,43 @@
                     const imgTag = `<img src="${escapeHTML(imgSrc)}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=400'">`;
 
                     let tagsArray = data.tags || (data.tag ? [data.tag] : ['НОВОСТЬ']);
-                    let tagsHTML = tagsArray.map(t => `<span class="tag" style="margin-right: 5px;">${escapeHTML(t)}</span>`).join('');
+                    let firstTag = tagsArray[0];
 
-                    // ФОРМИРУЕМ КРАСИВУЮ ССЫЛКУ (slug + id)
                     const articleLink = `article.html?article=${data.slug || 'news'}-${doc.id}`;
 
+                    // ПЛАШКА ПОВЕРХ КАРТИНКИ
+                    const tagOverlay = `<div class="tag-overlay">${escapeHTML(firstTag)}</div>`;
+
                     if (index === 0 && newsContainer.children.length === 1) {
+                        // ГЛАВНАЯ НОВОСТЬ (Span 2)
                         newsContainer.innerHTML = `
                             <a href="${articleLink}" class="hero-news" style="text-decoration: none; color: inherit;">
+                                ${tagOverlay}
                                 ${imgTag}
                                 <div class="hero-text">
-                                    <div style="margin-bottom: 10px;">${tagsHTML}</div>
                                     <h2>${escapeHTML(data.title)}</h2>
                                     <p>${escapeHTML(data.description || '')}</p>
-                                    <span class="date"><i class="far fa-clock"></i> ${dateStr} (Кемерово)</span>
+                                    <div style="display: flex; gap: 20px; align-items: center;">
+                                        <span class="date"><i class="far fa-clock"></i> ${dateStr} (Кемерово)</span>
+                                        <span class="views-count"><i class="far fa-eye"></i> ${data.views || 0}</span>
+                                    </div>
                                 </div>
                             </a>
                         `;
                         newsContainer.appendChild(grid);
                     } else {
+                        // ОБЫЧНЫЕ КАРТОЧКИ
                         gridContainer.innerHTML += `
                             <a href="${articleLink}" class="news-card" style="text-decoration: none; color: inherit;">
+                                ${tagOverlay}
                                 ${imgTag}
                                 <div class="card-content">
-                                    <div style="margin-bottom: 10px;">${tagsHTML}</div>
                                     <h3>${escapeHTML(data.title)}</h3>
                                     <p>${escapeHTML(data.description || '')}</p>
-                                    <span class="date" style="display:block; margin-top:10px; font-size:0.85rem;"><i class="far fa-clock"></i> ${dateStr} (Кемерово)</span>
+                                    <div style="display: flex; gap: 15px; align-items: center; margin-top: auto;">
+                                        <span class="date"><i class="far fa-clock"></i> ${dateStr}</span>
+                                        <span class="views-count"><i class="far fa-eye"></i> ${data.views || 0}</span>
+                                    </div>
                                 </div>
                             </a>
                         `;
@@ -176,7 +179,7 @@
                 });
             } catch (error) {
                 console.error("Ошибка:", error);
-                if (isFirstLoad) newsContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: #e74c3c;">Ошибка загрузки.</p>';
+                if (isFirstLoad) newsContainer.innerHTML = '<p style="text-align: center; padding: 20px; color: #e74c3c; grid-column: span 2;">Ошибка загрузки.</p>';
             }
         }
 
@@ -190,11 +193,10 @@
                 let index = 1;
                 snapshot.forEach((doc) => {
                     const data = doc.data();
-                    const articleLink = `article.html?article=${data.slug || 'news'}-${doc.id}`;
                     list.innerHTML += `
                         <li style="display: flex; gap: 12px; align-items: flex-start;">
-                            <span style="font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.2rem; color: var(--accent); line-height: 1;">${index}</span>
-                            <a href="${articleLink}" style="text-decoration: none; color: var(--text-color); font-size: 0.9rem; font-weight: 500; line-height: 1.4;">${escapeHTML(data.title)}</a>
+                            <span style="font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: 1.2rem; color: var(--accent); line-height: 1;">${index}</span>
+                            <a href="article.html?article=${data.slug || 'news'}-${doc.id}" style="text-decoration: none; color: var(--text-color); font-size: 0.9rem; font-weight: 500; line-height: 1.4;">${escapeHTML(data.title)}</a>
                         </li>`;
                     index++;
                 });
